@@ -58,8 +58,13 @@ function Header() {
     if (servicesDropdownOpen) setServicesDropdownOpen(false); // Close services dropdown if open
   };
 
-   // Updated function to handle opening maps with your specific address
-   const handleOpenMaps = () => {
+  // Function to handle phone calls
+  const handleCall = () => {
+    window.location.href = "tel:+16093480894";
+  };
+
+  // Updated function to handle opening maps with  specific address
+  const handleOpenMaps = () => {
     // Business address and coordinates
     const address = "2425 Atlantic Ave, Atlantic City, NJ 08401";
     const latitude = 39.3571342;
@@ -156,7 +161,12 @@ function Header() {
         <button className="icon-button" aria-label="Search">
           <i className="fa-solid fa-search"></i>
         </button>
-        <button className="icon-button" aria-label="Contact">
+        <button 
+          className="icon-button" 
+          aria-label="Contact"
+          onClick={handleCall}
+          title="Call (609) 348-0894"
+        >
           <i className="fa-solid fa-phone"></i>
         </button>
         <button 

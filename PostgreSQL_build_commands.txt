@@ -1,0 +1,382 @@
+'Comment free copypasta at bottom'
+
+
+# Access PostgreSQL command line
+psql -U postgres
+
+# Create database
+CREATE DATABASE xpressauto;
+
+# Connect to the new database
+\c xpressauto
+
+# Create a user (optional)
+CREATE USER admin WITH PASSWORD 'admin';
+
+# Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE xpressauto TO admin;
+
+# Create User Table
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    address TEXT,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    zip_code VARCHAR(20),
+    date_registered TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    profile_picture_url VARCHAR(255),
+    last_login TIMESTAMP
+);
+
+# Create Vehicles Table
+CREATE TABLE vehicles (
+    vehicle_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    make VARCHAR(50) NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    year INTEGER NOT NULL,
+    vin VARCHAR(17) UNIQUE,
+    license_plate VARCHAR(20),
+    color VARCHAR(30),
+    mileage INTEGER,
+    engine_type VARCHAR(50),
+    transmission VARCHAR(30),
+    date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_primary BOOLEAN DEFAULT FALSE
+);
+
+# Create Service Categories Table
+CREATE TABLE service_categories (
+    category_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT
+);
+
+# Create Services Table
+CREATE TABLE services (
+    service_id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES service_categories(category_id),
+    name VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    base_price DECIMAL(10,2) NOT NULL,
+    estimated_hours DECIMAL(4,2),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+# Create Technicians Table
+CREATE TABLE technicians (
+    technician_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    specialization TEXT,
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(20),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+# Create Service History Table
+CREATE TABLE service_history (
+    history_id SERIAL PRIMARY KEY,
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    user_id INTEGER REFERENCES users(user_id),
+    service_id INTEGER REFERENCES services(service_id),
+    service_date TIMESTAMP NOT NULL,
+    mileage_at_service INTEGER,
+    technician_id INTEGER REFERENCES technicians(technician_id),
+    price DECIMAL(10,2) NOT NULL,
+    notes TEXT,
+    status VARCHAR(30) DEFAULT 'completed',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+# Create Invoices Table
+CREATE TABLE invoices (
+    invoice_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    invoice_number VARCHAR(20) UNIQUE NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    tax_amount DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(30) DEFAULT 'unpaid',
+    issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    due_date TIMESTAMP,
+    notes TEXT
+);
+
+# Create Invoice Items Table
+CREATE TABLE invoice_items (
+    item_id SERIAL PRIMARY KEY,
+    invoice_id INTEGER REFERENCES invoices(invoice_id) ON DELETE CASCADE,
+    service_id INTEGER REFERENCES services(service_id),
+    history_id INTEGER REFERENCES service_history(history_id),
+    description TEXT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    total_price DECIMAL(10,2) NOT NULL
+);
+
+# Create Payments Table
+CREATE TABLE payments (
+    payment_id SERIAL PRIMARY KEY,
+    invoice_id INTEGER REFERENCES invoices(invoice_id),
+    payment_method VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    transaction_id VARCHAR(100),
+    status VARCHAR(30) DEFAULT 'completed',
+    notes TEXT
+);
+
+# Create Media Table
+CREATE TABLE media (
+    media_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    service_history_id INTEGER REFERENCES service_history(history_id),
+    media_type VARCHAR(20) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    thumbnail_url VARCHAR(255),
+    title VARCHAR(100),
+    description TEXT,
+    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_public BOOLEAN DEFAULT FALSE
+);
+
+# Create Loyalty Points Table
+CREATE TABLE loyalty_points (
+    point_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) UNIQUE,
+    points_balance INTEGER DEFAULT 0,
+    total_points_earned INTEGER DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+# Create Point Transactions Table
+CREATE TABLE point_transactions (
+    transaction_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    invoice_id INTEGER REFERENCES invoices(invoice_id),
+    points_amount INTEGER NOT NULL,
+    transaction_type VARCHAR(20) NOT NULL,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT
+);
+
+# Create Reviews Table
+CREATE TABLE reviews (
+    review_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    service_history_id INTEGER REFERENCES service_history(history_id) UNIQUE,
+    service_rating INTEGER CHECK (service_rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_public BOOLEAN DEFAULT TRUE
+);
+
+# Create Notifications Table
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    title VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(30) NOT NULL,
+    related_id INTEGER,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+******HERE******
+*******IS*******
+******THE*******
+*****SCRIPT*****
+
+
+
+**MAKE SURE YOUR USING POSTGRES 17 or change 17 in file path to version
+--------SAVE ANYTHIN BELOW THIS LINE AS setup.sql, in then run C:\Program Files\PostgreSQL\17\bin "psql -U postgres -f setup.sql"----------------------
+
+
+
+CREATE DATABASE xpressauto;
+
+\c xpressauto
+
+CREATE USER admin WITH PASSWORD 'admin';
+
+GRANT ALL PRIVILEGES ON DATABASE xpressauto TO admin;
+
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    address TEXT,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    zip_code VARCHAR(20),
+    date_registered TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    profile_picture_url VARCHAR(255),
+    last_login TIMESTAMP
+);
+
+CREATE TABLE vehicles (
+    vehicle_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    make VARCHAR(50) NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    year INTEGER NOT NULL,
+    vin VARCHAR(17) UNIQUE,
+    license_plate VARCHAR(20),
+    color VARCHAR(30),
+    mileage INTEGER,
+    engine_type VARCHAR(50),
+    transmission VARCHAR(30),
+    date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_primary BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE service_categories (
+    category_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE services (
+    service_id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES service_categories(category_id),
+    name VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    base_price DECIMAL(10,2) NOT NULL,
+    estimated_hours DECIMAL(4,2),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE technicians (
+    technician_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    specialization TEXT,
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(20),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE service_history (
+    history_id SERIAL PRIMARY KEY,
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    user_id INTEGER REFERENCES users(user_id),
+    service_id INTEGER REFERENCES services(service_id),
+    service_date TIMESTAMP NOT NULL,
+    mileage_at_service INTEGER,
+    technician_id INTEGER REFERENCES technicians(technician_id),
+    price DECIMAL(10,2) NOT NULL,
+    notes TEXT,
+    status VARCHAR(30) DEFAULT 'completed',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE invoices (
+    invoice_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    invoice_number VARCHAR(20) UNIQUE NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    tax_amount DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(30) DEFAULT 'unpaid',
+    issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    due_date TIMESTAMP,
+    notes TEXT
+);
+
+CREATE TABLE invoice_items (
+    item_id SERIAL PRIMARY KEY,
+    invoice_id INTEGER REFERENCES invoices(invoice_id) ON DELETE CASCADE,
+    service_id INTEGER REFERENCES services(service_id),
+    history_id INTEGER REFERENCES service_history(history_id),
+    description TEXT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    total_price DECIMAL(10,2) NOT NULL
+);
+
+CREATE TABLE payments (
+    payment_id SERIAL PRIMARY KEY,
+    invoice_id INTEGER REFERENCES invoices(invoice_id),
+    payment_method VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    transaction_id VARCHAR(100),
+    status VARCHAR(30) DEFAULT 'completed',
+    notes TEXT
+);
+
+CREATE TABLE media (
+    media_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    service_history_id INTEGER REFERENCES service_history(history_id),
+    media_type VARCHAR(20) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    thumbnail_url VARCHAR(255),
+    title VARCHAR(100),
+    description TEXT,
+    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_public BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE loyalty_points (
+    point_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) UNIQUE,
+    points_balance INTEGER DEFAULT 0,
+    total_points_earned INTEGER DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE point_transactions (
+    transaction_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    invoice_id INTEGER REFERENCES invoices(invoice_id),
+    points_amount INTEGER NOT NULL,
+    transaction_type VARCHAR(20) NOT NULL,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT
+);
+
+CREATE TABLE reviews (
+    review_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    service_history_id INTEGER REFERENCES service_history(history_id) UNIQUE,
+    service_rating INTEGER CHECK (service_rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_public BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    title VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(30) NOT NULL,
+    related_id INTEGER,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
