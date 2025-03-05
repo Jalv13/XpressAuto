@@ -46,7 +46,9 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Provides CSRF protection
 CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 
 #S3 bucker keys, we should switch these to a .env to make it more secure..
-##PASTE KEYS
+
+"""PASTE KEYS IN POOP BELOW, MAKE SURE TO REMOVE BEFORE YOU PUSH OR YOU WILL GET A COMMIT ERROR"""
+
 AWS_ACCESS_KEY = "poop"
 AWS_SECRET_KEY = "poop"
 AWS_REGION = "poop"
