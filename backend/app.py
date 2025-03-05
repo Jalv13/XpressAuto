@@ -2,10 +2,9 @@ from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_sqlalchemy import SQLAlchemy
 import os
-import secrets
-import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
@@ -14,14 +13,7 @@ DB_USER = "postgres"
 DB_PASSWORD = "BeachHouse"
 DB_HOST = "express-auto.c6bogymw63tm.us-east-1.rds.amazonaws.com"
 DB_PORT = "5324"
-DB_NAME = "postgres"
-
-# Construct the PostgreSQL connection URI
-app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# Initialize SQLAlchemy
-db = SQLAlchemy(app)
+DB_NAME = "express-auto"
 
 # Security Configurations
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')  # Use environment variable in production!
@@ -35,38 +27,66 @@ CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-# User model for PostgreSQL
-class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+# Function to establish a database connection
+def get_db_connection():
+    return psycopg2.connect(
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        cursor_factory=RealDictCursor
+    )
+
+# User model
+class User(UserMixin):
+    def __init__(self, id, username, password):
+        self.id = id
+        self.username = username
+        self.password = password
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    user_data = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if user_data:
+        return User(user_data['id'], user_data['username'], user_data['password'])
+    return None
 
 # Database connection test route
 @app.route('/api/db-test', methods=['GET'])
 def test_db():
     try:
-        with db.engine.connect() as connection:
-            result = connection.execute("SELECT NOW();").fetchone()
-            return jsonify({"status": "success", "message": f"Connected to PostgreSQL at {result[0]}"})
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT NOW();")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "success", "message": f"Connected to PostgreSQL at {result['now']}"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-    
-
 
 # Authentication routes
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
-    user = User.query.filter_by(username=data.get('username')).first()
-
-    if user and check_password_hash(user.password, data.get('password')):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = %s", (data.get('username'),))
+    user_data = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if user_data and check_password_hash(user_data['password'], data.get('password')):
+        user = User(user_data['id'], user_data['username'], user_data['password'])
         login_user(user)
         return jsonify({"status": "success", "user": {"id": user.id, "username": user.username}})
-
+    
     return jsonify({"status": "failed", "message": "Invalid username or password"}), 401
 
 @app.route('/api/logout', methods=['POST'])
@@ -94,7 +114,6 @@ def protected():
 def unauthorized(error):
     return jsonify({"status": "error", "message": "Unauthorized access"}), 401
 
-
 @app.route('/api/add-user', methods=['POST'])
 def add_user():
     data = request.get_json()
@@ -102,16 +121,20 @@ def add_user():
         return jsonify({"status": "failed", "message": "Username and password required"}), 400
 
     hashed_password = generate_password_hash(data["password"])
-    new_user = User(username=data["username"], password=hashed_password)
-
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        db.session.add(new_user)
-        db.session.commit()
-        return jsonify({"status": "success", "message": f"User {new_user.username} added!"})
+        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s) RETURNING id", (data["username"], hashed_password))
+        new_user_id = cursor.fetchone()["id"]
+        conn.commit()
+        return jsonify({"status": "success", "message": f"User {data['username']} added!", "user_id": new_user_id})
     except Exception as e:
-        db.session.rollback()
-        return jsonify({"status\": \"error\", \"message\": str(e)"}), 500
-
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
