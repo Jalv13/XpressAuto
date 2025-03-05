@@ -5,7 +5,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 
 function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,10 +17,10 @@ function Login() {
     setLoading(true);
     setError("");
   
-    console.log("Attempting login with:", { username, password });
+    console.log("Attempting login with:", { email, password });
     
     // Use the login function from AuthContext
-    const success = await login(username, password);
+    const success = await login(email, password);
     
     if (success) {
       console.log("Login successful, redirecting...");
@@ -44,11 +44,12 @@ function Login() {
               <label htmlFor="username">Email</label>
               <input
                 type="email"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"  // Change 'id' to 'email'
+                value={email}  // Change 'username' to 'email'
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
+
             </div>
             <div className="form-group">
               <label htmlFor="password">Password</label>
