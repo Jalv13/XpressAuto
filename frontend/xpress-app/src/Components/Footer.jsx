@@ -1,3 +1,6 @@
+//Authors: Joshua, , , , ,
+
+
 function Footer() {
   return (
     <footer>

@@ -1,3 +1,6 @@
+//Authors: Joshua, , , , ,
+
+
 function Hero() {
   return (
     <section className="hero">
