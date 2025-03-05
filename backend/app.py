@@ -155,7 +155,6 @@ def login():
         return jsonify({"status": "success", "user": {"id": user.id, "email": user.email}}), 200
     
     return jsonify({"status": "failed", "message": "Invalid email or password"}), 401
-    return jsonify({"status": "failed", "message": "Invalid email or password"}), 401
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
@@ -844,4 +843,3 @@ if __name__ == '__main__':
 # ============================================================================
 # if you use a font with ligatures it'll look better
 # https://github.com/githubnext/monaspace <- cool font
-# ~Josh
