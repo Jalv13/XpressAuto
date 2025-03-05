@@ -12,8 +12,8 @@ app = Flask(__name__)
 DB_USER = "postgres"
 DB_PASSWORD = "BeachHouse"
 DB_HOST = "express-auto.c6bogymw63tm.us-east-1.rds.amazonaws.com"
-DB_PORT = "5324"
-DB_NAME = "express-auto"
+DB_PORT = "5432"
+DB_NAME = "xpressauto"
 
 # Security Configurations
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')  # Use environment variable in production!
