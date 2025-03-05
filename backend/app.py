@@ -155,6 +155,7 @@ def login():
         return jsonify({"status": "success", "user": {"id": user.id, "email": user.email}}), 200
     
     return jsonify({"status": "failed", "message": "Invalid email or password"}), 401
+    return jsonify({"status": "failed", "message": "Invalid email or password"}), 401
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
