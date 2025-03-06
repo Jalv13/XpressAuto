@@ -1,3 +1,5 @@
+//Authors: Joshua, , , , ,
+
 function WhyUs() {
   return (
     <section className="why-us">
