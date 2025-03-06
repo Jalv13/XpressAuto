@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.js
 import { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
+import PropTypes from 'prop-types';
 
 const API_URL = "http://localhost:5000/api";
 
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await axios.get(`${API_URL}/user`);
         setUser(response.data);
-      } catch (error) {
+      } catch {
         // User is not authenticated, which is fine for rn
         console.log("User not authenticated");
       } finally {
@@ -39,9 +40,9 @@ export const AuthProvider = ({ children }) => {
         username,
         password,
       });
-      // Add debugging:
+
       console.log("Login response:", response.data);
-      // Check if response.data.user exists, otherwise use response.data
+   
       setUser(response.data.user || response.data);
       return true;
     } catch (err) {
@@ -69,5 +70,9 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 
 export const useAuth = () => useContext(AuthContext);

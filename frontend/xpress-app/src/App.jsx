@@ -7,6 +7,7 @@ import Dashboard from "./Components/Dashboard.jsx";
 import ForgotPassword from "./Components/ForgotPassword.jsx";
 import ResetPassword from "./Components/ResetPassword.jsx";
 import Profile from "./Components/Profile.jsx";
+import AboutUs from "./Components/AboutUs.jsx";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/aboutus" element={<AboutUs />} />
         </Routes>
       </Router>
     </AuthProvider>
