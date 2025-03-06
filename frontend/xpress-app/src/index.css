@@ -165,6 +165,11 @@ body {
   gap: 12px;
 }
 
+.logo-image {
+  height: 50px; /* Adjust as needed */
+  width: auto; /* Ensures proper scaling */
+}
+
 .icon-button {
   background: rgba(255, 255, 255, 0.2);
   color: #333;
@@ -335,6 +340,13 @@ body {
   text-align: center;
   padding: 50px;
   font-size: 24px;
+  background: #f8f8f8;
+}
+
+.tire-service {
+  text-align: center;
+  padding: 50px;
+  font-size: 20px;
   background: #f8f8f8;
 }
 
@@ -956,6 +968,10 @@ textarea {
 
 .dashboard-link:hover {
   background-color: #e9ecef;
+}
+
+.photo-link {
+  margin: 2rem 0;
 }
 
 small {

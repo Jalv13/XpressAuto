@@ -159,7 +159,7 @@ def login():
     return jsonify({"status": "failed", "message": "Invalid email or password"}), 401
 
 @app.route('/api/logout', methods=['POST'])
-@login_required
+
 def logout():
     """Ends the user's session"""
     try:

@@ -2,7 +2,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 
 
-const OilChange = () => {
+const BrakeService = () => {
     return (
         <>
             <Header />
@@ -11,7 +11,7 @@ const OilChange = () => {
         position: 'relative',
         width: '100%',
         height: '500px',
-        backgroundImage: 'url(/images/oilchange2.jpg)',
+        backgroundImage: 'url(/images/brakechange1.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'relative',
         display: 'flex',
@@ -21,15 +21,15 @@ const OilChange = () => {
         color: '#fff',
         textAlign: 'center',
             }}>
-                <h1>Oil Change Services</h1>
-                <p>Welcome to our oil change services page. .</p>
-                <p>We offer a variety of oil change options to keep your vehicle running smoothly.</p>
-                <p>Synthethic and Regular Oil</p>
-                <p>Filter Changes are available as well</p>
+                <h1>Brake Services</h1>
+                <p>Welcome to our brake services page. .</p>
+                <p>Brakes are one of the most important parts of the car.</p>
+                <p>Make sure you stay safe by checking your brakes</p>
+               
             </div>
             <Footer />
         </>
     );
 };
 
-export default OilChange;
+export default BrakeService;

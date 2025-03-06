@@ -2,7 +2,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 
 
-const OilChange = () => {
+const Diagnostic = () => {
     return (
         <>
             <Header />
@@ -11,7 +11,7 @@ const OilChange = () => {
         position: 'relative',
         width: '100%',
         height: '500px',
-        backgroundImage: 'url(/images/oilchange2.jpg)',
+        backgroundImage: 'url(/images/Diagnostic1.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'relative',
         display: 'flex',
@@ -21,15 +21,15 @@ const OilChange = () => {
         color: '#fff',
         textAlign: 'center',
             }}>
-                <h1>Oil Change Services</h1>
-                <p>Welcome to our oil change services page. .</p>
-                <p>We offer a variety of oil change options to keep your vehicle running smoothly.</p>
-                <p>Synthethic and Regular Oil</p>
-                <p>Filter Changes are available as well</p>
+                <h1>Diagnostic</h1>
+                <p>Welcome to our diagnostic services page. .</p>
+                <p>We offer a variety of diagnostic options to keep your vehicle running smoothly.</p>
+                <p>Come Check what's wrong with your vehicle</p>
+                <p>OBD2 Meter checks are available</p>
             </div>
             <Footer />
         </>
     );
 };
 
-export default OilChange;
+export default Diagnostic;
