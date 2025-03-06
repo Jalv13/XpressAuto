@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.js
 import { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
+import PropTypes from 'prop-types';
 
 const API_URL = "http://localhost:5000/api";
 
@@ -38,12 +39,10 @@ export const AuthProvider = ({ children }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }) // Ensure correct field names
       });
-
       const data = await response.json();
-
       if (response.ok) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        setUser(data.user); // ✅ Fixed: Now updates state correctly
+        setUser(data.user); 
         return true;
       } else {
         setError(data.message || "Login failed");
@@ -75,5 +74,9 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 
 export const useAuth = () => useContext(AuthContext);
