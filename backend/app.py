@@ -177,6 +177,9 @@ def get_user():
     return jsonify({
         "id": current_user.id,
         "email": current_user.email
+        "first_name" : user_details.get("first_name", ""),
+        "last_name": user_details.get("last_name", ""),
+        "name": f"{user_details.get('first_name', '')} {user_details.get('last_name', '')}".strip()
     }), 200
 
 # ============================================================================
