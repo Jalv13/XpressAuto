@@ -90,7 +90,7 @@ function Header() {
     <header className={`header ${scrolled ? "header-scrolled" : ""}`}>
       <div className="logo">
         <Link to="/"> 
-          <span className="logo-highlight">Express Auto Care</span>
+          <img src="/images/New-Express-Logo.png" alt="Express Auto Care" className="logo-image" />
         </Link>
       </div>
       
