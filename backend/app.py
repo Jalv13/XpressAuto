@@ -6,7 +6,7 @@ It handles user authentication, registration, and profile management operations.
 """
 # ============================================================================
 
- #Authors: Joshua, , , , ,
+ #Authors: Joshua, , , , , ,
 
 # ============================================================================
 
