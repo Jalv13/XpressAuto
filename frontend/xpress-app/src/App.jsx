@@ -10,6 +10,8 @@ import ForgotPassword from "./Components/ForgotPassword.jsx";
 import ResetPassword from "./Components/ResetPassword.jsx";
 import Profile from "./Components/Profile.jsx";
 import AboutUs from "./Components/AboutUs.jsx";
+import OilChange from "./Components/OilChange.jsx";
+import TireService from "./Components/TireService.jsx";
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/aboutus" element={<AboutUs />} />
+          <Route path="/services/oil-change" element={<OilChange />} />
+          <Route path="/services/tire-service" element={<TireService />} />
         </Routes>
       </Router>
     </AuthProvider>

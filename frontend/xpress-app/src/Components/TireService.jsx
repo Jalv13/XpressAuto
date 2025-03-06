@@ -2,16 +2,16 @@ import Header from "./Header";
 import Footer from "./Footer";
 
 
-const OilChange = () => {
+const TireService = () => {
     return (
         <>
             <Header />
-            <div className="hero" 
+            <div className="tire-service" 
         style={{
         position: 'relative',
         width: '100%',
         height: '500px',
-        backgroundImage: 'url(/images/oilchange1.jpg)',
+        backgroundImage: 'url(/images/tirechange1.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         display: 'flex',
@@ -20,12 +20,12 @@ const OilChange = () => {
         color: '#fff',
         textAlign: 'center',
             }}>
-                <h1>Oil Change Services</h1>
-                <p>Welcome to our oil change services page. We offer a variety of oil change options to keep your vehicle running smoothly.</p>
+                <h1>Tire Services</h1>
+                
             </div>
             <Footer />
         </>
     );
 };
 
-export default OilChange;
+export default TireService;

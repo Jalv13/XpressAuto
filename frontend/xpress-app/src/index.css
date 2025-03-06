@@ -343,6 +343,13 @@ body {
   background: #f8f8f8;
 }
 
+.tire-service {
+  text-align: center;
+  padding: 50px;
+  font-size: 20px;
+  background: #f8f8f8;
+}
+
 /* Services Section */
 .services {
   padding: 30px;
@@ -961,6 +968,10 @@ textarea {
 
 .dashboard-link:hover {
   background-color: #e9ecef;
+}
+
+.photo-link {
+  margin: 2rem 0;
 }
 
 small {
