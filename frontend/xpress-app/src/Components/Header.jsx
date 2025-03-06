@@ -148,8 +148,8 @@ function Header() {
             </>
           )}
           <li>
-            <Link to="/about" className={isActive("/about") ? "active-link" : ""}>
-              About Us
+            <Link to="/aboutus" className={isActive("/about") ? "active-link" : ""}>
+              AboutUs
             </Link>
           </li>
         </ul>
