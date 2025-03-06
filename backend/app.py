@@ -49,10 +49,10 @@ CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 
 """PASTE KEYS IN POOP BELOW, MAKE SURE TO REMOVE BEFORE YOU PUSH OR YOU WILL GET A COMMIT ERROR"""
 
-AWS_ACCESS_KEY = "poop"
-AWS_SECRET_KEY = "poop"
-AWS_REGION = "poop"
-S3_BUCKET_NAME = "poop"
+AWS_ACCESS_KEY = "poop"  # Use environment variable in production
+AWS_SECRET_KEY = "poop"  # Use environment variable in production
+AWS_REGION = "poop"      # Use environment variable in production
+S3_BUCKET_NAME = "poop"  # Use environment variable in production
 
 
 s3_client = boto3.client(
@@ -162,7 +162,12 @@ def login():
 @login_required
 def logout():
     """Ends the user's session"""
-    logout_user()
+    try:
+        logout_user()
+    except Exception as e:
+        #logging error; there's an issue here I just bootlegged it so it just clears the session token
+        print(f"Error here during logout {e}")
+    session.clear()
     return jsonify({"status": "success"}), 200
 
 @app.route('/api/user', methods=['GET'])
