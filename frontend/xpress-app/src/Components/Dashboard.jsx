@@ -1,5 +1,4 @@
 //Authors: Joshua, , , , ,
-
 import { Link } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import Header from "./Header";
@@ -8,12 +7,25 @@ import Footer from "./Footer";
 function Dashboard() {
   const { user, loading } = useAuth();
   
+  if (loading) {
+    return <div>
+      Loading.....
+    </div>
+  }
+
+  // Get display name with fallbacks
+  const getDisplayName = () => {
+    if (!user) return "Guest";
+    if (user.name && user.name.trim() !== "") return user.name;
+    if (user.first_name) return user.first_name;
+    return "Guest";  // Fallback to username part of email
+  };
 
   return (
     <>
       <Header />
       <div className="dashboard-container">
-        <h1>Welcome, {"Tony"}</h1>
+        <h1>Welcome, {getDisplayName()}</h1>
         <div className="dashboard-content">
           <p>This is your personal dashboard.</p>
           {/* Add dashboard content here */}
