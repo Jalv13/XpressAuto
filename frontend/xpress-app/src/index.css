@@ -1,3 +1,6 @@
+/*Authors: Joshua, , , , ,*/
+/* We gotta organize this mess, I think its optimizable too */
+
 /* General Styling */
 body {
   margin: 0;
@@ -23,6 +26,7 @@ body {
 .header-scrolled {
   padding: 10px 5%;
   background: rgba(255, 204, 0, 0.95);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
@@ -159,6 +163,11 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.logo-image {
+  height: 50px; /* Adjust as needed */
+  width: auto; /* Ensures proper scaling */
 }
 
 .icon-button {
@@ -331,6 +340,13 @@ body {
   text-align: center;
   padding: 50px;
   font-size: 24px;
+  background: #f8f8f8;
+}
+
+.tire-service {
+  text-align: center;
+  padding: 50px;
+  font-size: 20px;
   background: #f8f8f8;
 }
 
@@ -952,6 +968,10 @@ textarea {
 
 .dashboard-link:hover {
   background-color: #e9ecef;
+}
+
+.photo-link {
+  margin: 2rem 0;
 }
 
 small {

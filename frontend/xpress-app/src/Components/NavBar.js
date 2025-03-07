@@ -1,4 +1,5 @@
-// src/components/Navbar.js
+//Authors: Joshua, , , , ,
+
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 

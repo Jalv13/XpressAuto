@@ -1,4 +1,5 @@
-// src/components/ProtectedRoute.js
+//Authors: Joshua, , , , ,
+
 import PropTypes from "prop-types";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";

@@ -1,3 +1,6 @@
+//Authors: Joshua, , , , ,
+
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
@@ -87,7 +90,7 @@ function Header() {
     <header className={`header ${scrolled ? "header-scrolled" : ""}`}>
       <div className="logo">
         <Link to="/"> 
-          <span className="logo-highlight">Express Auto Care</span>
+          <img src="/images/New-Express-Logo.png" alt="Express Auto Care" className="logo-image" />
         </Link>
       </div>
       
@@ -145,8 +148,8 @@ function Header() {
             </>
           )}
           <li>
-            <Link to="/about" className={isActive("/about") ? "active-link" : ""}>
-              About Us
+            <Link to="/aboutus" className={isActive("/about") ? "active-link" : ""}>
+              AboutUs
             </Link>
           </li>
         </ul>

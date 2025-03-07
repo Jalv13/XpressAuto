@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.js
 import { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
+import PropTypes from 'prop-types';
 
 const API_URL = "http://localhost:5000/api";
 
@@ -12,7 +13,7 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [ error, setError] = useState(null);
+  const [error, setError] = useState(null);
 
   // Check if user is authenticated on initial load
   useEffect(() => {
@@ -21,8 +22,7 @@ export const AuthProvider = ({ children }) => {
         const response = await axios.get(`${API_URL}/user`);
         setUser(response.data);
       } catch (error) {
-        // User is not authenticated, which is fine for rn
-        console.log("User not authenticated");
+        console.log("User not authenticated"); // User is not logged in, this is expected behavior
       } finally {
         setLoading(false);
       }
@@ -32,21 +32,25 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (username, password) => {
+  const login = async (email, password) => {
     try {
-      setError(null);
-      const response = await axios.post(`${API_URL}/login`, {
-        username,
-        password,
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }) // Ensure correct field names
       });
-      // Add debugging:
-      console.log("Login response:", response.data);
-      // Check if response.data.user exists, otherwise use response.data
-      setUser(response.data.user || response.data);
-      return true;
-    } catch (err) {
-      console.error("Login error:", err);
-      setError(err.response?.data?.message || "Login failed");
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        setUser(data.user); 
+        return true;
+      } else {
+        setError(data.message || "Login failed");
+        return false;
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("An error occurred during login.");
       return false;
     }
   };
@@ -56,6 +60,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await axios.post(`${API_URL}/logout`);
       setUser(null);
+      localStorage.removeItem("user");
       return true;
     } catch (err) {
       setError(err.response?.data?.message || "Logout failed");
@@ -69,5 +74,9 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 
 export const useAuth = () => useContext(AuthContext);
