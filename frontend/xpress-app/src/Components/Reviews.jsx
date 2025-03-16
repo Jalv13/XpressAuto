@@ -4,50 +4,63 @@
 import { useState, useEffect } from "react";
 
 function Reviews() {
+  const [reviews, setReviews] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock data for reviews
-  const reviews = [
-    {
-      id: 1,
-      name: "Sarah M.",
-      rating: 5,
-      date: "January 15, 2025",
-      comment:
-        "Incredible service! My car was fixed same-day. Will definitely return for future maintenance.",
-      service: "Brake Repair",
-    },
-    {
-      id: 2,
-      name: "Michael T.",
-      rating: 4,
-      date: "December 3, 2024",
-      comment:
-        "Professional team that explained everything clearly. Fair pricing and they finished on schedule.",
-      service: "Oil Change & Tune-up",
-    },
-    {
-      id: 3,
-      name: "Jennifer K.",
-      rating: 5,
-      date: "November 18, 2024",
-      comment:
-      "I really appreciated the respectful and transparent service here!",
-      service: "Transmission Service",
-    },
-    {
-      id: 4,
-      name: "Robert P.",
-      rating: 5,
-      date: "October 22, 2024",
-      comment:
-        "Been taking my vehicles here for years. Always reliable, honest, and they stand behind their work.",
-      service: "Engine Diagnostics",
-    },
-  ];
+  // Your Google Place ID
+  const PLACE_ID = "ChIJv55qw2fuwIkReDtLLJcfUYk";
+
+  useEffect(() => {
+    // Function to fetch reviews from Google Places API via our backend
+    const fetchGoogleReviews = async () => {
+      try {
+        setLoading(true);
+        
+        // Use the Flask endpoint path
+        const response = await fetch(`/api/reviews`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch reviews: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Check if data has the expected structure
+        if (!data.reviews || !Array.isArray(data.reviews)) {
+          console.error("Unexpected API response structure:", data);
+          throw new Error("API response missing reviews array");
+        }
+        
+        // Format the reviews
+        const formattedReviews = data.reviews.map(review => ({
+          id: review.time,
+          name: review.author_name,
+          rating: review.rating,
+          date: new Date(review.time * 1000).toLocaleDateString(),
+          comment: review.text,
+
+        }));
+        
+        setReviews(formattedReviews);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching Google reviews:", err);
+        setError("Failed to load reviews. Please try again later.");
+        setLoading(false);
+        
+      }
+    };
+
+    fetchGoogleReviews();
+  }, []);
+
 
   // Auto-rotate reviews
   useEffect(() => {
+    if (reviews.length === 0) return;
+    
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) =>
         prevIndex === reviews.length - 1 ? 0 : prevIndex + 1
@@ -75,6 +88,49 @@ function Reviews() {
     return stars;
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <section className="reviews">
+        <div className="reviews-container">
+          <h2>Customer Reviews</h2>
+          <p className="reviews-subtitle">Loading our latest customer feedback...</p>
+          <div className="loading-spinner">Loading...</div>
+        </div>
+      </section>
+    );
+  }
+
+  // Show error state
+  if (error && reviews.length === 0) {
+    return (
+      <section className="reviews">
+        <div className="reviews-container">
+          <h2>Customer Reviews</h2>
+          <p className="reviews-subtitle">We're having trouble loading our reviews</p>
+          <p className="error-message">{error}</p>
+        </div>
+      </section>
+    );
+  }
+
+  // No reviews to display
+  if (reviews.length === 0) {
+    return (
+      <section className="reviews">
+        <div className="reviews-container">
+          <h2>Customer Reviews</h2>
+          <p className="reviews-subtitle">Be the first to leave us a review!</p>
+          <div className="review-cta">
+            <a href="#" className="review-button">
+              Leave a Review
+            </a>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="reviews">
       <div className="reviews-container">
@@ -87,11 +143,22 @@ function Reviews() {
               <div className="rating">
                 {renderStars(reviews[currentIndex].rating)}
               </div>
-              <div className="service-tag">{reviews[currentIndex].service}</div>
+              {reviews[currentIndex].service && (
+                <div className="service-tag">{reviews[currentIndex].service}</div>
+              )}
             </div>
             <p className="review-comment">{reviews[currentIndex].comment}</p>
             <div className="review-footer">
-              <span className="review-name">{reviews[currentIndex].name}</span>
+              <div className="reviewer-info">
+                {reviews[currentIndex].profilePhoto && (
+                  <img 
+                    src={reviews[currentIndex].profilePhoto} 
+                    alt={`${reviews[currentIndex].name} profile`}
+                    className="reviewer-photo" 
+                  />
+                )}
+                <span className="review-name">{reviews[currentIndex].name}</span>
+              </div>
               <span className="review-date">{reviews[currentIndex].date}</span>
             </div>
           </div>
@@ -109,10 +176,20 @@ function Reviews() {
         </div>
 
         <div className="review-cta">
-          <a href="#" className="review-button">
+          <a 
+            href={`https://search.google.com/local/writereview?placeid=${PLACE_ID}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="review-button"
+          >
             Leave a Review
           </a>
-          <a href="#" className="review-button secondary">
+          <a 
+            href={`https://search.google.com/local/reviews?placeid=${PLACE_ID}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="review-button secondary"
+          >
             See All Reviews
           </a>
         </div>

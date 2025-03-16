@@ -21,6 +21,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import boto3
 import mimetypes
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables
+
 
 
 # Initialize Flask application
@@ -176,7 +181,7 @@ def get_user():
     """Returns the currently authenticated user's details"""
     return jsonify({
         "id": current_user.id,
-        "email": current_user.email
+        "email": current_user.email,
         "first_name" : user_details.get("first_name", ""),
         "last_name": user_details.get("last_name", ""),
         "name": f"{user_details.get('first_name', '')} {user_details.get('last_name', '')}".strip()
@@ -520,48 +525,79 @@ def add_service():
 # ============================================================================
 
 # Add a review
-@app.route('/api/add-review', methods=['POST'])
-@login_required
-def add_review():
-    data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
+@app.route('/api/reviews', methods=['GET'])
+def get_reviews():
+    """
+    Fetch Google reviews for a business using its place_id.
+    
 
+    
+    Returns:
+    - JSON response with reviews data or error message
+    """
     try:
-        cursor.execute(
-            "INSERT INTO reviews (user_id, service_history_id, service_rating, comment) VALUES (%s, %s, %s, %s) RETURNING review_id",
-            (current_user.id, data["service_history_id"], data["service_rating"], data.get("comment", ""))
-        )
-        review_id = cursor.fetchone()["review_id"]
-        conn.commit()
-        return jsonify({"status": "success", "message": "Review submitted!", "review_id": review_id}), 201
+        place_id = "ChIJv55qw2fuwIkReDtLLJcfUYk"
+        
+        # Get optional limit parameter (default to 5)
+        try:
+            limit = int(request.args.get('limit', 5))
+            if limit < 1 or limit > 100:
+                return jsonify({"error": "Limit must be between 1 and 100"}), 400
+        except ValueError:
+            return jsonify({"error": "Limit must be a valid integer"}), 400
+        
+        # First, get the place details which include reviews
+        url = "https://maps.googleapis.com/maps/api/place/details/json"
+        
+        # IMPORTANT: Use environment variables for API keys
+        # This is a placeholder - replace with your actual method to get the API key
+        
+        params = {
+            "place_id": place_id,
+            "fields": "name,formatted_address,reviews",
+            "reviews_sort": "highest",  # Get highest reviews first
+            "key": os.getenv("GOOGLE_MAPS_API_KEY")
+        }
+        
+        # Make the request to Google Places API
+        # This is the correct way to make an HTTP request
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # Raise exception for HTTP errors
+        
+        # Parse the response
+        data = response.json()
+        
+        # Check if the request was successful
+        if data['status'] != 'OK':
+            return jsonify({
+                "error": f"Google API returned error: {data['status']}",
+                "details": data.get('error_message', 'No details provided')
+            }), 400
+            
+        # Extract business name and reviews
+        business_name = data['result'].get('name', 'Unknown Business')
+        reviews = data['result'].get('reviews', [])
+        
+        # Limit the number of reviews
+        reviews = reviews[:limit]
+        
+        # Format the response
+        result = {
+            "business_name": business_name,
+            "place_id": place_id,
+            "reviews_count": len(reviews),
+            "reviews": reviews
+        }
+        
+        return jsonify(result)
+    
+    except requests.exceptions.RequestException as e:
+        # Handle request-related errors (network issues, invalid responses, etc.)
+        return jsonify({"error": f"Error fetching reviews: {str(e)}"}), 500
+    
     except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-# Get all reviews for a service
-@app.route('/api/get-reviews/<int:service_id>', methods=['GET'])
-def get_reviews(service_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "SELECT r.review_id, r.service_rating, r.comment, u.email, r.created_at FROM reviews r "
-            "JOIN users u ON r.user_id = u.user_id "
-            "JOIN service_history sh ON r.service_history_id = sh.history_id "
-            "WHERE sh.service_id = %s", (service_id,)
-        )
-        reviews = cursor.fetchall()
-        return jsonify({"status": "success", "reviews": reviews}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
+        # Catch any other unexpected errors
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
 # ============================================================================
 #NOTIFICATIONS
