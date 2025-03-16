@@ -10,7 +10,7 @@ function Reviews() {
   const [error, setError] = useState(null);
 
   // Your Google Place ID
-  const PLACE_ID = "ChIJv55qw2fuwIkReDtLLJcfUYk";
+  const PLACE_ID = "";
 
   useEffect(() => {
     // Function to fetch reviews from Google Places API via our backend
@@ -19,7 +19,9 @@ function Reviews() {
         setLoading(true);
         
         // Use the Flask endpoint path
-        const response = await fetch(`/api/reviews`);
+        const response = await fetch(`http://localhost:5000/api/reviews`, {
+          credentials: 'include'
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch reviews: ${response.status}`);
@@ -35,7 +37,6 @@ function Reviews() {
         
         // Format the reviews
         const formattedReviews = data.reviews.map(review => ({
-          id: review.time,
           name: review.author_name,
           rating: review.rating,
           date: new Date(review.time * 1000).toLocaleDateString(),
@@ -49,6 +50,8 @@ function Reviews() {
         console.error("Error fetching Google reviews:", err);
         setError("Failed to load reviews. Please try again later.");
         setLoading(false);
+        
+        // Set fallback reviews when API fails
         
       }
     };
@@ -87,6 +90,46 @@ function Reviews() {
     }
     return stars;
   };
+
+  // Fallback reviews in case API fails
+  const fallbackReviews = [
+    {
+      id: 1,
+      name: "Sarah M.",
+      rating: 5,
+      date: "January 15, 2025",
+      comment:
+        "Incredible service! My car was fixed same-day. Will definitely return for future maintenance.",
+      
+    },
+    {
+      id: 2,
+      name: "Michael T.",
+      rating: 4,
+      date: "December 3, 2024",
+      comment:
+        "Professional team that explained everything clearly. Fair pricing and they finished on schedule.",
+      
+    },
+    {
+      id: 3,
+      name: "Jennifer K.",
+      rating: 5,
+      date: "November 18, 2024",
+      comment:
+        "I really appreciated the respectful and transparent service here!",
+      
+    },
+    {
+      id: 4,
+      name: "Robert P.",
+      rating: 5,
+      date: "October 22, 2024",
+      comment:
+        "Been taking my vehicles here for years. Always reliable, honest, and they stand behind their work.",
+      
+    },
+  ];
 
   // Show loading state
   if (loading) {

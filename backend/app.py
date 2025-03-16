@@ -524,17 +524,9 @@ def add_service():
 # REVIEWS
 # ============================================================================
 
-# Add a review
+# Fetch Google reviews for a business using its place_id.
 @app.route('/api/reviews', methods=['GET'])
 def get_reviews():
-    """
-    Fetch Google reviews for a business using its place_id.
-    
-
-    
-    Returns:
-    - JSON response with reviews data or error message
-    """
     try:
         place_id = "ChIJv55qw2fuwIkReDtLLJcfUYk"
         
@@ -549,14 +541,12 @@ def get_reviews():
         # First, get the place details which include reviews
         url = "https://maps.googleapis.com/maps/api/place/details/json"
         
-        # IMPORTANT: Use environment variables for API keys
-        # This is a placeholder - replace with your actual method to get the API key
         
         params = {
             "place_id": place_id,
             "fields": "name,formatted_address,reviews",
             "reviews_sort": "highest",  # Get highest reviews first
-            "key": os.getenv("GOOGLE_MAPS_API_KEY")
+            "key": os.getenv(GOOGLE_MAPS_API_KEY) #make a env file and add api key
         }
         
         # Make the request to Google Places API
