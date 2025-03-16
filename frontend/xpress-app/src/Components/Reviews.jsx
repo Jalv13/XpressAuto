@@ -10,7 +10,7 @@ function Reviews() {
   const [error, setError] = useState(null);
 
   // Your Google Place ID
-  const PLACE_ID = "";
+  const PLACE_ID = "ChIJv55qw2fuwIkReDtLLJcfUYk";
 
   useEffect(() => {
     // Function to fetch reviews from Google Places API via our backend
