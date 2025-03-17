@@ -52,7 +52,7 @@ function Reviews() {
         setLoading(false);
         
         // Set fallback reviews when API fails
-        
+       
       }
     };
 

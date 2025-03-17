@@ -24,6 +24,7 @@ import mimetypes
 import requests
 from dotenv import load_dotenv
 
+
 load_dotenv()  # Load environment variables
 
 
@@ -530,30 +531,21 @@ def get_reviews():
     try:
         place_id = "ChIJv55qw2fuwIkReDtLLJcfUYk"
         
-        # Get optional limit parameter (default to 5)
-        try:
-            limit = int(request.args.get('limit', 5))
-            if limit < 1 or limit > 100:
-                return jsonify({"error": "Limit must be between 1 and 100"}), 400
-        except ValueError:
-            return jsonify({"error": "Limit must be a valid integer"}), 400
-        
         # First, get the place details which include reviews
         url = "https://maps.googleapis.com/maps/api/place/details/json"
         
         
         params = {
-            "place_id": place_id,
-            "fields": "name,formatted_address,reviews",
             "reviews_sort": "highest",  # Get highest reviews first
-            "key": os.getenv(GOOGLE_MAPS_API_KEY) #make a env file and add api key
+            "place_id": place_id,
+            "fields": "name,formatted_address,reviews", 
+            "key": os.getenv("GOOGLE_MAPS_API_KEY") #make a env file and add api key
         }
         
         # Make the request to Google Places API
-        # This is the correct way to make an HTTP request
         response = requests.get(url, params=params)
         response.raise_for_status()  # Raise exception for HTTP errors
-        
+            
         # Parse the response
         data = response.json()
         
@@ -567,10 +559,7 @@ def get_reviews():
         # Extract business name and reviews
         business_name = data['result'].get('name', 'Unknown Business')
         reviews = data['result'].get('reviews', [])
-        
-        # Limit the number of reviews
-        reviews = reviews[:limit]
-        
+
         # Format the response
         result = {
             "business_name": business_name,
@@ -581,12 +570,12 @@ def get_reviews():
         
         return jsonify(result)
     
-    except requests.exceptions.RequestException as e:
-        # Handle request-related errors (network issues, invalid responses, etc.)
+    # Handle request-related errors (network issues, invalid responses, etc.)
+    except requests.exceptions.RequestException as e: 
         return jsonify({"error": f"Error fetching reviews: {str(e)}"}), 500
     
+    # Catch any other unexpected errors
     except Exception as e:
-        # Catch any other unexpected errors
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
 # ============================================================================
