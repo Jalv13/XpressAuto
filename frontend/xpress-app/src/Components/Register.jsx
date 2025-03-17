@@ -11,10 +11,13 @@ function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -32,7 +35,17 @@ function Register() {
     setLoading(true);
     setError("");
 
-    const result = await authService.register(username, password);
+    // Option 1: Use the original register method
+    // const result = await authService.register(username, password);
+
+    // Option 2: Use the addUser method to take advantage of your /add-user endpoint
+    const result = await authService.addUser({
+      email: username,
+      password: password,
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone
+    });
 
     if (result.success) {
       // Redirect to dashboard or home after successful registration
@@ -62,6 +75,38 @@ function Register() {
                 required
               />
             </div>
+            
+            {/* Additional fields for the /add-user endpoint */}
+            <div className="form-group">
+              <label htmlFor="firstName">First Name</label>
+              <input
+                type="text"
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="lastName">Last Name</label>
+              <input
+                type="text"
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="phone">Phone</label>
+              <input
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            
             <div className="form-group">
               <label htmlFor="password">Password</label>
               <input
