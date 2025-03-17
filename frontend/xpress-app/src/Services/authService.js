@@ -86,21 +86,22 @@ export const authService = {
     }
   },
 
-  // Add this to your existing authService object
-  register: async (username, password) => {
-    try {
-      const response = await axios.post(`${API_URL}/register`, {
-        username,
-        password,
-      });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || "Registration failed",
-      };
-    }
-  },
+// Add user with extended profile information
+addUser: async (userData) => {
+  try {
+    const response = await axios.post(`${API_URL}/add-user`, userData);
+    return { 
+      success: true, 
+      data: response.data,
+      userId: response.data.user_id 
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.message || "Failed to add user",
+    };
+  }
+},
   // Add these to your existing authService object
   getProfile: async () => {
     try {
