@@ -974,7 +974,13 @@ def upload_media():
     try:
         # Upload file to S3
         s3_client.upload_fileobj(
-            file, S3_BUCKET_NAME, filename, ExtraArgs={"ContentType": content_type}
+            file,
+            S3_BUCKET_NAME,
+            filename,
+            ExtraArgs={
+                "CacheControl": "public, max-age=86400",
+                "ContentType": "image/jpeg",
+            },
         )
 
         # Construct file URL
