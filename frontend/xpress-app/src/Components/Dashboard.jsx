@@ -1,17 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axios from "axios"; 
 import { useAuth } from "./contexts/AuthContext";
 import Header from "./Header";
 import Footer from "./Footer";
+import { Line } from "react-chartjs-2"; // Ensure you have react-chartjs-2 and chart.js installed
+import ContentLoader from "react-content-loader"; // For animated skeletons
 
 function Dashboard() {
   const { user, loading } = useAuth();
   const [loyaltyPoints, setLoyaltyPoints] = useState(null);
+  const [pointsHistory, setPointsHistory] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
     if (user) {
+      // Fetch current loyalty points
       axios
         .get("http://localhost:5000/api/get-loyalty-points", { withCredentials: true })
         .then((res) => {
@@ -21,6 +26,17 @@ function Dashboard() {
         })
         .catch((err) => console.error("Error fetching loyalty points", err));
 
+      // Fetch loyalty points history for the trend graph
+      axios
+        .get("http://localhost:5000/api/get-loyalty-points-history", { withCredentials: true })
+        .then((res) => {
+          if (res.data.status === "success") {
+            setPointsHistory(res.data.history);
+          }
+        })
+        .catch((err) => console.error("Error fetching loyalty points history", err));
+
+      // Fetch notifications
       axios
         .get("http://localhost:5000/api/get-notifications", { withCredentials: true })
         .then((res) => {
@@ -32,9 +48,9 @@ function Dashboard() {
     }
   }, [user]);
 
-  if (loading) {
-    return <div>Loading.....</div>;
-  }
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
+  };
 
   const getDisplayName = () => {
     if (!user) return "Guest";
@@ -43,16 +59,64 @@ function Dashboard() {
     return "Guest";
   };
 
+  const dismissNotification = (notificationId) => {
+    setNotifications((prev) =>
+      prev.filter((n) => n.notification_id !== notificationId)
+    );
+  };
+
+  // Prepare chart data if pointsHistory exists
+  const chartData = {
+    labels: pointsHistory ? pointsHistory.map((entry) => entry.date) : [],
+    datasets: [
+      {
+        label: "Loyalty Points Over Time",
+        data: pointsHistory ? pointsHistory.map((entry) => entry.points) : [],
+        fill: false,
+        borderColor: "rgba(75,192,192,1)",
+        tension: 0.1,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    scales: {
+      x: {
+        type: "time",
+        time: {
+          unit: "day",
+        },
+      },
+    },
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <ContentLoader speed={2} width={400} height={160} viewBox="0 0 400 160">
+          <rect x="0" y="0" rx="5" ry="5" width="400" height="160" />
+        </ContentLoader>
+      </div>
+    );
+  }
+
   return (
     <>
       <Header />
-      <div className="dashboard-container">
+      <div className={`dashboard-container ${theme}`}>
+        <div className="theme-toggle">
+          <button onClick={toggleTheme}>
+            Switch to {theme === "light" ? "Dark" : "Light"} Mode
+          </button>
+        </div>
         <h1>Welcome, {getDisplayName()}</h1>
         <div className="dashboard-content">
           <p>This is your personal dashboard.</p>
 
           <div className="dashboard-stats">
-            <div className="stat-box">
+            {/* Loyalty Points Section */}
+            <div className="stat-box loyalty-points">
               <h3>Loyalty Points</h3>
               {loyaltyPoints ? (
                 <>
@@ -60,16 +124,27 @@ function Dashboard() {
                   <p>Total Earned: {loyaltyPoints.total_points_earned}</p>
                 </>
               ) : (
-                <p>Loading Loyalty Points...</p>
+                <ContentLoader speed={2} width={300} height={50} viewBox="0 0 300 50">
+                  <rect x="0" y="0" rx="5" ry="5" width="300" height="50" />
+                </ContentLoader>
               )}
             </div>
-            <div className="stat-box">
+
+            {/* Notifications Section */}
+            <div className="stat-box notifications">
               <h3>Notifications</h3>
               {notifications.length > 0 ? (
                 <ul>
                   {notifications.map((note) => (
                     <li key={note.notification_id}>
-                      <strong>{note.title}:</strong> {note.message}
+                      <div className="notification-item">
+                        <div>
+                          <strong>{note.title}:</strong> {note.message}
+                        </div>
+                        <button onClick={() => dismissNotification(note.notification_id)}>
+                          Dismiss
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -78,7 +153,20 @@ function Dashboard() {
               )}
             </div>
           </div>
+
+          {/* Loyalty Points Trend Chart */}
+          <div className="dashboard-chart">
+            <h3>Loyalty Points Trend</h3>
+            {pointsHistory ? (
+              <Line data={chartData} options={chartOptions} />
+            ) : (
+              <ContentLoader speed={2} width={400} height={200} viewBox="0 0 400 200">
+                <rect x="0" y="0" rx="5" ry="5" width="400" height="200" />
+              </ContentLoader>
+            )}
+          </div>
         </div>
+
         <div className="dashboard-links">
           <Link to="/profile" className="dashboard-link">
             View/Edit Profile
