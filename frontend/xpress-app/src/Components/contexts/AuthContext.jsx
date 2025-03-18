@@ -37,12 +37,13 @@ export const AuthProvider = ({ children }) => {
       const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }) // Ensure correct field names
+        credentials: "include", // Ensure cookies are sent with the request
+        body: JSON.stringify({ email, password })
       });
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        setUser(data.user); 
+        setUser(data.user);
         return true;
       } else {
         setError(data.message || "Login failed");

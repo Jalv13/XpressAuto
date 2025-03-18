@@ -10,18 +10,32 @@ axios.defaults.withCredentials = true;
 
 // Authentication service methods
 export const authService = {
-  // Login function
-  login: async (username, password) => {
+  // Fetch user profile data using GET /api/user
+  getProfile: async () => {
     try {
-      const response = await axios.post(`${API_URL}/login`, {
-        username,
-        password,
+      const response = await axios.get(`${API_URL}/user`, {
+        withCredentials: true,
       });
       return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Login failed",
+        error: error.response?.data?.message || error.message,
+      };
+    }
+  },
+
+  // Update user profile data using PUT /api/profile
+  updateProfile: async (profileData) => {
+    try {
+      const response = await axios.put(`${API_URL}/profile`, profileData, {
+        withCredentials: true,
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || "Failed to update profile",
       };
     }
   },
@@ -49,7 +63,6 @@ export const authService = {
     }
   },
 
-  // Add these to your existing authService object
   requestPasswordReset: async (email) => {
     try {
       const response = await axios.post(`${API_URL}/request-password-reset`, {
@@ -86,43 +99,18 @@ export const authService = {
     }
   },
 
-// Add user with extended profile information
-addUser: async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/add-user`, userData);
-    return { 
-      success: true, 
-      data: response.data,
-      userId: response.data.user_id 
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data?.message || "Failed to add user",
-    };
-  }
-},
-  // Add these to your existing authService object
-  getProfile: async () => {
+  addUser: async (userData) => {
     try {
-      const response = await axios.get(`${API_URL}/profile`);
-      return { success: true, data: response.data.profile };
-    } catch (error) {
+      const response = await axios.post(`${API_URL}/add-user`, userData);
       return {
-        success: false,
-        error: error.response?.data?.message || "Failed to fetch profile",
+        success: true,
+        data: response.data,
+        userId: response.data.user_id,
       };
-    }
-  },
-
-  updateProfile: async (profileData) => {
-    try {
-      const response = await axios.put(`${API_URL}/profile`, profileData);
-      return { success: true, data: response.data.profile };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to update profile",
+        error: error.response?.data?.message || "Failed to add user",
       };
     }
   },

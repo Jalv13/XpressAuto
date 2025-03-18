@@ -62,21 +62,33 @@ function Profile() {
   };
 
   // Handle profile form submission
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("");
+ // Transform the profile state before submitting
+const handleProfileSubmit = async (e) => {
+  e.preventDefault();
+  setMessage("");
 
-    const result = await authService.updateProfile(profile);
+  // Assume the full name in profile.name is in "First Last" format
+  const [first_name = "", ...lastParts] = profile.name.split(" ");
+  const last_name = lastParts.join(" ");
 
-    if (result.success) {
-      setIsSuccess(true);
-      setMessage("Profile updated successfully");
-      setProfile(result.data);
-    } else {
-      setIsSuccess(false);
-      setMessage(result.error || "Failed to update profile");
-    }
+  // Create payload matching backend
+  const payload = {
+    first_name,
+    last_name,
+    phone: profile.phone,
   };
+
+  const result = await authService.updateProfile(payload);
+
+  if (result.success) {
+    setIsSuccess(true);
+    setMessage("Profile updated successfully");
+    // Optionally update your local state
+  } else {
+    setIsSuccess(false);
+    setMessage(result.error || "Failed to update profile");
+  }
+};
 
   // Handle password change form submission
   const handlePasswordSubmit = async (e) => {

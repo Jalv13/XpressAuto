@@ -205,18 +205,38 @@ def logout():
 @login_required
 def get_user():
     """Returns the currently authenticated user's details"""
-    return (
-        jsonify(
-            {
-                "id": current_user.id,
-                "email": current_user.email,
-                "first_name": user_details.get("first_name", ""),
-                "last_name": user_details.get("last_name", ""),
-                "name": f"{user_details.get('first_name', '')} {user_details.get('last_name', '')}".strip(),
-            }
-        ),
-        200,
-    )
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT first_name, last_name FROM users WHERE user_id = %s",
+            (current_user.id,),
+        )
+        user_details = cursor.fetchone() or {}
+        first_name = user_details.get("first_name", "")
+        last_name = user_details.get("last_name", "")
+        name = (
+            f"{first_name} {last_name}".strip()
+            if (first_name or last_name)
+            else current_user.email
+        )
+        return (
+            jsonify(
+                {
+                    "id": current_user.id,
+                    "email": current_user.email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "name": name,
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # API ROUTES - USER MANAGEMENT
@@ -287,16 +307,16 @@ def get_users():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/update-user/<int:user_id>", methods=["PUT"])
+@app.route("/api/profile", methods=["PUT"])
 @login_required
-def update_user(user_id):
-    """Updates a user's profile information"""
+def update_profile():
+    """Updates the current user's profile information"""
     data = request.get_json()
+    user_id = current_user.id  # Always use the logged in user's ID
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
     try:
-        # Update user data in database
         cursor.execute(
             "UPDATE users SET first_name = %s, last_name = %s, phone = %s WHERE user_id = %s RETURNING user_id",
             (data.get("first_name"), data.get("last_name"), data.get("phone"), user_id),
@@ -812,7 +832,6 @@ def read_notification(notification_id):
 def get_loyalty_points():
     conn = get_db_connection()
     cursor = conn.cursor()
-
     try:
         cursor.execute(
             "SELECT points_balance, total_points_earned, last_updated FROM loyalty_points WHERE user_id = %s",
@@ -820,8 +839,12 @@ def get_loyalty_points():
         )
         points = cursor.fetchone()
         if not points:
-            return jsonify({"status": "error", "message": "No points found"}), 404
-
+            # Return default loyalty points values if record is missing
+            points = {
+                "points_balance": 0,
+                "total_points_earned": 0,
+                "last_updated": None,
+            }
         return jsonify({"status": "success", "points": points}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

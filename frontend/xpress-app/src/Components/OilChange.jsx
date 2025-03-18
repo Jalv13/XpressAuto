@@ -1,7 +1,5 @@
 import Header from "./Header";
-import Footer from "./Footer";
-import React from "react";
-import background from "../Components/images/Oilchange1demo.jpg";
+
 
 const OilChange = () => {
     return (
@@ -12,7 +10,7 @@ const OilChange = () => {
         position: 'relative',
         width: '100%',
         height: '500px',
-        backgroundImage: 'url(/images/oilchange2.jpg)',
+        backgroundImage: 'url(/images/oilchange1.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'relative',
         display: 'flex',

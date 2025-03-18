@@ -45,7 +45,7 @@ function Hero() {
         }}
       >
         <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', textTransform: 'uppercase' }}>
-          Atlantic City's Most Trusted Auto Repair Shop
+          Atlantic City&apos;s Most Trusted Auto Repair Shop
         </h2>
       </div>
     </section>
