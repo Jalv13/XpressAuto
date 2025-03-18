@@ -10,7 +10,7 @@ function Hero() {
         position: 'relative',
         width: '100%',
         height: '500px',
-        backgroundImage: 'url(/images/building2.JPG)',
+        backgroundImage: 'url(/images/Express-At-Night.jpg) ',
         backgroundSize: 'cover',
         backgroundRepeat: "no-repeat",
         backgroundPosition: 'center',
@@ -24,7 +24,7 @@ function Hero() {
 
       <div 
         style={{
-          position: 'absolute',
+          position: 'absolute',I
           top: 0,
           left: 0,
           width: '100%',
@@ -39,7 +39,7 @@ function Hero() {
           position: 'relative',
           zIndex: 2,
           backdropFilter: 'blur(10px)',
-          padding: '20px',
+          padding: '5px',
           borderRadius: '10px',
           background: 'rgba(0, 0, 0, 0.3)',
         }}

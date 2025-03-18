@@ -3,7 +3,7 @@
 import axios from "axios";
 
 // Set the base URL to your Flask backend
-const API_URL = "http://127.0.0.1:5000/api";
+const API_URL = "http://localhost:5000/api";
 
 // Configure axios to include credentials (cookies)
 axios.defaults.withCredentials = true;
@@ -24,15 +24,16 @@ export const authService = {
       };
     }
   },
-
-  // Update user profile data using PUT /api/profile
   updateProfile: async (profileData) => {
     try {
+      console.log("Sending profile update:", profileData);
       const response = await axios.put(`${API_URL}/profile`, profileData, {
         withCredentials: true,
       });
+      console.log("Profile update response:", response.data);
       return { success: true, data: response.data };
     } catch (error) {
+      console.error("Profile update error:", error);
       return {
         success: false,
         error: error.response?.data?.message || "Failed to update profile",

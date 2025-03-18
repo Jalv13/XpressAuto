@@ -63,33 +63,39 @@ function Profile() {
 
   // Handle profile form submission
  // Transform the profile state before submitting
-const handleProfileSubmit = async (e) => {
+ const handleProfileSubmit = async (e) => {
   e.preventDefault();
   setMessage("");
 
-  // Assume the full name in profile.name is in "First Last" format
-  const [first_name = "", ...lastParts] = profile.name.split(" ");
-  const last_name = lastParts.join(" ");
+  // Extract first and last name more reliably
+  let first_name = "", last_name = "";
+  const nameParts = profile.name.trim().split(" ");
+  if (nameParts.length > 0) {
+    first_name = nameParts[0];
+    if (nameParts.length > 1) {
+      last_name = nameParts.slice(1).join(" ");
+    }
+  }
 
-  // Create payload matching backend
   const payload = {
     first_name,
     last_name,
-    phone: profile.phone,
-  };
+    phone: profile.phone || "",
+    address: profile.address || ""
+};
 
+  console.log("Submitting profile update:", payload);
   const result = await authService.updateProfile(payload);
-
+  
   if (result.success) {
     setIsSuccess(true);
     setMessage("Profile updated successfully");
-    // Optionally update your local state
   } else {
     setIsSuccess(false);
     setMessage(result.error || "Failed to update profile");
+    console.error("Profile update failed:", result.error);
   }
 };
-
   // Handle password change form submission
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
