@@ -4,13 +4,11 @@ import axios from "axios";
 import { useAuth } from "./contexts/AuthContext";
 import Header from "./Header";
 import Footer from "./Footer";
-import { Line } from "react-chartjs-2"; // Ensure you have react-chartjs-2 and chart.js installed
 import ContentLoader from "react-content-loader"; // For animated skeletons
 
 function Dashboard() {
   const { user, loading } = useAuth();
   const [loyaltyPoints, setLoyaltyPoints] = useState(null);
-  const [pointsHistory, setPointsHistory] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [theme, setTheme] = useState("light");
 
@@ -25,16 +23,6 @@ function Dashboard() {
           }
         })
         .catch((err) => console.error("Error fetching loyalty points", err));
-
-      // Fetch loyalty points history for the trend graph
-      axios
-        .get("http://localhost:5000/api/get-loyalty-points-history", { withCredentials: true })
-        .then((res) => {
-          if (res.data.status === "success") {
-            setPointsHistory(res.data.history);
-          }
-        })
-        .catch((err) => console.error("Error fetching loyalty points history", err));
 
       // Fetch notifications
       axios
@@ -63,32 +51,6 @@ function Dashboard() {
     setNotifications((prev) =>
       prev.filter((n) => n.notification_id !== notificationId)
     );
-  };
-
-  // Prepare chart data if pointsHistory exists
-  const chartData = {
-    labels: pointsHistory ? pointsHistory.map((entry) => entry.date) : [],
-    datasets: [
-      {
-        label: "Loyalty Points Over Time",
-        data: pointsHistory ? pointsHistory.map((entry) => entry.points) : [],
-        fill: false,
-        borderColor: "rgba(75,192,192,1)",
-        tension: 0.1,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    scales: {
-      x: {
-        type: "time",
-        time: {
-          unit: "day",
-        },
-      },
-    },
   };
 
   if (loading) {
@@ -152,18 +114,6 @@ function Dashboard() {
                 <p>No notifications</p>
               )}
             </div>
-          </div>
-
-          {/* Loyalty Points Trend Chart */}
-          <div className="dashboard-chart">
-            <h3>Loyalty Points Trend</h3>
-            {pointsHistory ? (
-              <Line data={chartData} options={chartOptions} />
-            ) : (
-              <ContentLoader speed={2} width={400} height={200} viewBox="0 0 400 200">
-                <rect x="0" y="0" rx="5" ry="5" width="400" height="200" />
-              </ContentLoader>
-            )}
           </div>
         </div>
 

@@ -863,8 +863,17 @@ def add_loyalty_points():
 
     try:
         cursor.execute(
-            "UPDATE loyalty_points SET points_balance = points_balance + %s, total_points_earned = total_points_earned + %s, last_updated = NOW() WHERE user_id = %s RETURNING points_balance",
-            (data["points"], data["points"], current_user.id),
+            """
+            INSERT INTO loyalty_points (user_id, points_balance, total_points_earned, last_updated)
+            VALUES (%s, %s, %s, NOW())
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                points_balance = loyalty_points.points_balance + EXCLUDED.points_balance,
+                total_points_earned = loyalty_points.total_points_earned + EXCLUDED.total_points_earned,
+                last_updated = NOW()
+            RETURNING points_balance
+            """,
+            (current_user.id, data["points"], data["points"]),
         )
         updated_points = cursor.fetchone()
         if not updated_points:
@@ -881,6 +890,7 @@ def add_loyalty_points():
             ),
             200,
         )
+
     except Exception as e:
         conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
