@@ -24,7 +24,7 @@ function Hero() {
 
       <div 
         style={{
-          position: 'absolute',I
+          position: 'absolute',
           top: 0,
           left: 0,
           width: '100%',
