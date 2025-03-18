@@ -274,6 +274,12 @@ def add_user():
         )
         new_user_id = cursor.fetchone()["user_id"]
         conn.commit()
+
+         # Create User object and log them in automatically
+        user = User(new_user_id, data["email"])
+        login_user(user)
+
+        
         return (
             jsonify(
                 {

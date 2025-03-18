@@ -48,8 +48,10 @@ function Register() {
     });
 
     if (result.success) {
+
+      
       // Redirect to dashboard or home after successful registration
-      navigate("/dashboard");
+      navigate("/");
     } else {
       setError(result.error || "Registration failed. Please try again.");
     }
