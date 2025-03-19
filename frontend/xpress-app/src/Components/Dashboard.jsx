@@ -36,7 +36,6 @@ function Dashboard() {
     }
   }, [user]);
 
-
   const getDisplayName = () => {
     if (!user) return "Guest";
     if (user.name && user.name.trim() !== "") return user.name;
@@ -44,10 +43,24 @@ function Dashboard() {
     return "Guest";
   };
 
-  const dismissNotification = (notificationId) => {
-    setNotifications((prev) =>
-      prev.filter((n) => n.notification_id !== notificationId)
-    );
+  // Modified dismissNotification that calls the API to mark notification as read
+  const dismissNotification = async (notificationId) => {
+    try {
+      const res = await axios.put(
+        `http://localhost:5000/api/mark-notification-read/${notificationId}`,
+        {},
+        { withCredentials: true }
+      );
+      if (res.data.status === "success") {
+        setNotifications((prev) =>
+          prev.filter((n) => n.notification_id !== notificationId)
+        );
+      } else {
+        console.error("Error marking notification as read:", res.data.message);
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   if (loading) {
@@ -70,7 +83,7 @@ function Dashboard() {
           style={{
             display: "flex",
             justifyContent: "flex-end",
-            marginBottom: "20px"
+            marginBottom: "20px",
           }}
         >
           {user && user.profile_picture_url ? (

@@ -789,10 +789,9 @@ def get_reviews():
 def get_notifications():
     conn = get_db_connection()
     cursor = conn.cursor()
-
     try:
         cursor.execute(
-            "SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC",
+            "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE ORDER BY created_at DESC",
             (current_user.id,),
         )
         notifications = cursor.fetchall()
@@ -804,24 +803,65 @@ def get_notifications():
         conn.close()
 
 
-# Mark a notification as read
-@app.route("/api/read-notification/<int:notification_id>", methods=["PUT"])
-@login_required
-def read_notification(notification_id):
+@app.route("/api/send-notification", methods=["POST"])
+def send_notification():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    title = data.get("title", "Notification")
+    message = data.get("message", "")
+    notification_type = data.get("type", "info")  # default type
+    related_id = data.get("related_id")  # optional
+
     conn = get_db_connection()
     cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO notifications (user_id, title, message, type, related_id)
+            VALUES (%s, %s, %s, %s, %s) RETURNING notification_id
+            """,
+            (user_id, title, message, notification_type, related_id),
+        )
+        notification_id = cursor.fetchone()["notification_id"]
+        conn.commit()
+        return jsonify({"status": "success", "notification_id": notification_id}), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
+
+@app.route("/api/mark-notification-read/<int:notification_id>", methods=["PUT"])
+@login_required
+def mark_notification_read(notification_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
     try:
         cursor.execute(
             "UPDATE notifications SET is_read = TRUE WHERE notification_id = %s AND user_id = %s",
             (notification_id, current_user.id),
         )
+        if cursor.rowcount == 0:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Notification not found or not authorized",
+                    }
+                ),
+                404,
+            )
+
         conn.commit()
         return (
             jsonify({"status": "success", "message": "Notification marked as read"}),
             200,
         )
+
     except Exception as e:
+        conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()
