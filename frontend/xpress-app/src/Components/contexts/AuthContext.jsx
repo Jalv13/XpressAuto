@@ -1,7 +1,6 @@
-// src/contexts/AuthContext.js
 import { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -20,6 +19,8 @@ export const AuthProvider = ({ children }) => {
     const checkAuthStatus = async () => {
       try {
         const response = await axios.get(`${API_URL}/user`);
+        // Expecting the backend to return profile_picture_url along with other user info.
+        console.log("Authenticated user:", response.data);
         setUser(response.data);
       } catch (error) {
         console.log("User not authenticated"); // User is not logged in, this is expected behavior
@@ -38,10 +39,11 @@ export const AuthProvider = ({ children }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Ensure cookies are sent with the request
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
       if (response.ok) {
+        // Ensure that the user object saved includes profile_picture_url (from backend)
         localStorage.setItem("user", JSON.stringify(data.user));
         setUser(data.user);
         return true;
@@ -75,9 +77,9 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
 AuthProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };
-
 
 export const useAuth = () => useContext(AuthContext);

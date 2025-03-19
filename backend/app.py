@@ -24,6 +24,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import boto3
 import mimetypes
+import uuid
 import requests
 from dotenv import load_dotenv
 
@@ -209,12 +210,13 @@ def get_user():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT first_name, last_name FROM users WHERE user_id = %s",
+            "SELECT first_name, last_name, profile_picture_url FROM users WHERE user_id = %s",
             (current_user.id,),
         )
         user_details = cursor.fetchone() or {}
         first_name = user_details.get("first_name", "")
         last_name = user_details.get("last_name", "")
+        profile_photo = user_details.get("profile_picture_url", "")
         name = (
             f"{first_name} {last_name}".strip()
             if (first_name or last_name)
@@ -228,12 +230,13 @@ def get_user():
                     "first_name": first_name,
                     "last_name": last_name,
                     "name": name,
+                    "profile_picture_url": profile_photo,
                 }
             ),
             200,
         )
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
@@ -274,12 +277,6 @@ def add_user():
         )
         new_user_id = cursor.fetchone()["user_id"]
         conn.commit()
-
-         # Create User object and log them in automatically
-        user = User(new_user_id, data["email"])
-        login_user(user)
-
-        
         return (
             jsonify(
                 {
@@ -986,6 +983,8 @@ def upload_media():
             ExtraArgs={
                 "CacheControl": "public, max-age=86400",
                 "ContentType": "image/jpeg",
+                "ACL": "public-read",
+                # TODO: Probably want to change this, its not secure
             },
         )
 
@@ -1116,6 +1115,64 @@ def delete_media(media_id):
     finally:
         cursor.close()
         conn.close()
+
+
+# USER PROFILE TEST POINT
+@app.route("/api/upload-profile-photo", methods=["POST"])
+@login_required
+def upload_profile_photo():
+    if "file" not in request.files:
+        return jsonify({"success": False, "message": "No file uploaded"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"success": False, "message": "No file selected"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"success": False, "message": "File type not allowed"}), 400
+
+    filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    try:
+        # Include ACL: public-read to make the object accessible
+        s3_client.upload_fileobj(
+            file,
+            S3_BUCKET_NAME,
+            filename,
+            ExtraArgs={
+                "CacheControl": "public, max-age=86400",
+                "ContentType": content_type,
+                "ACL": "public-read",  # <-- Add this line
+            },
+        )
+        file_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "UPDATE users SET profile_picture_url = %s WHERE user_id = %s RETURNING profile_picture_url",
+            (file_url, current_user.id),
+        )
+        updated = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Profile photo updated",
+                    "profile_picture_url": updated["profile_picture_url"],
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # APPLICATION ENTRY POINT

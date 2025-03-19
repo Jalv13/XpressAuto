@@ -101,6 +101,11 @@ function Header() {
           <li>
             <Link to="/" className={isActive("/") ? "active-link" : ""}>Home</Link>
           </li>
+          <li>
+            <Link to="/aboutus" className={isActive("/about") ? "active-link" : ""}>
+              About Us
+            </Link>
+          </li>
           <li className="dropdown">
             <a 
               href="#" 
@@ -116,6 +121,7 @@ function Header() {
               <Link to="/services/diagnostics">Diagnostics</Link>
             </div>
           </li>
+
           {user ? (
             // Show profile dropdown when user is logged in
             <li className="dropdown">
@@ -147,14 +153,9 @@ function Header() {
               </li>
             </>
           )}
-          <li>
-            <Link to="/aboutus" className={isActive("/about") ? "active-link" : ""}>
-              AboutUs
-            </Link>
-          </li>
+
         </ul>
       </nav>
-      
       <div className="header-actions">
         <button className="icon-button" aria-label="Search">
           <i className="fa-solid fa-search"></i>
@@ -172,16 +173,31 @@ function Header() {
         </button>
         {user && (
           <div className="user-avatar">
-            <span>{user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}</span>
+            {user.profile_picture_url ? (
+              <img
+                src={user.profile_picture_url}
+                alt="User Avatar"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <span>
+                {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
+              </span>
+            )}
           </div>
         )}
          <div className="mobile-menu-toggle" onClick={toggleMobileMenu}>
-        <div className={`hamburger ${mobileMenuOpen ? "active" : ""}`}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      </div>
+           <div className={`hamburger ${mobileMenuOpen ? "active" : ""}`}>
+             <span></span>
+             <span></span>
+             <span></span>
+           </div>
+         </div>
       </div>
     </header>
   );

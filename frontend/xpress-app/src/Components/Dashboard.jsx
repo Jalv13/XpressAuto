@@ -36,9 +36,6 @@ function Dashboard() {
     }
   }, [user]);
 
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
-  };
 
   const getDisplayName = () => {
     if (!user) return "Guest";
@@ -67,10 +64,32 @@ function Dashboard() {
     <>
       <Header />
       <div className={`dashboard-container ${theme}`}>
-        <div className="theme-toggle">
-          <button onClick={toggleTheme}>
-            Switch to {theme === "light" ? "Dark" : "Light"} Mode
-          </button>
+        {/* User photo icon placed above the welcome message */}
+        <div
+          className="dashboard-user-photo"
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginBottom: "20px"
+          }}
+        >
+          {user && user.profile_picture_url ? (
+            <img
+              src={user.profile_picture_url}
+              alt="User Photo"
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: "24px", fontWeight: "bold" }}>
+              {user &&
+                (user.displayName?.charAt(0) || user.email?.charAt(0) || "U")}
+            </span>
+          )}
         </div>
         <h1>Welcome, {getDisplayName()}</h1>
         <div className="dashboard-content">
