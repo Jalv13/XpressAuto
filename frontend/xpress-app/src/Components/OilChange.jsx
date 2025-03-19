@@ -1,13 +1,13 @@
 import Header from "./Header";
 import Footer from "./Footer";
-import React from "react";
-import background from "../Components/images/Oilchange1demo.jpg";
+/* import background from "../Components/images/Oilchange1demo.jpg"; */
 
 const OilChange = () => {
     return (
         <>
             <Header />
-            <div className="hero" 
+            <div className="oil-change-services" 
+        /*
         style={{
         position: 'relative',
         width: '100%',
@@ -21,7 +21,7 @@ const OilChange = () => {
         justifyContent: 'center',
         color: '#fff',
         textAlign: 'center',
-            }}>
+            }}*/>
                 <h1>Oil Change Services</h1>
                 <p>Welcome to our oil change services page. .</p>
                 <p>We offer a variety of oil change options to keep your vehicle running smoothly.</p>
@@ -29,12 +29,13 @@ const OilChange = () => {
                 <p>Filter Changes are available as well</p>
             </div>
 
-        <Header />
-        <div style={{backgroundImage: `url(${background})`, backgroundSize: "cover", height: "10%", color: "Black", textAlign: "left", padding: "20px"}}>
-            <h1 style={{ backgroundColor: 'white' }}>Oil Change Services</h1>
-            <p style= {{ backgroundColor: 'white'}}>Welcome to our oil change services page. We offer a variety of oil change options to keep your vehicle running smoothly.</p>
+        <Header/>
+        <div className="oil-change-body" /* style={{backgroundImage: `url(${background})`, backgroundSize: "cover", height: "10%", color: "Black", textAlign: "left", padding: "20px"}} */>
+            <h1 /*style={{ backgroundColor: 'orange', textAlign: 'center'}}*/>Oil Change Services</h1>
+            <p /* style= {{ backgroundColor: 'orange'}}*/ >Welcome to our oil change services page. We offer a variety of oil change options to keep your vehicle running smoothly.</p>
             {/* Add more content and components as needed */}
         </div>
+
             <Footer />
         </>
     );

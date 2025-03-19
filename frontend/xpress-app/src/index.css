@@ -342,7 +342,36 @@ body {
   font-size: 24px;
   background: #f8f8f8;
 }
+/* Oil Change Section */
+.oil-change-services {
+  color: white;
+  text-align: center;
+  padding: 16%;
+  font-size: 20px;
+  background-color: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter:blur(5px); /* For safari */
+  backdrop-filter: blur(5px);
+  border-radius: 0px;
+  background-image: url('/images/oilchange1.jpg') , linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5));
+  background-position-y: 40%;
+  background-position-x: 50%;
+  background-size: cover;
+  background-repeat: no-repeat;
 
+}
+
+/*
+.oil-change-body {
+  text-align: center;
+  padding: 50px;
+  font-size: 20px;
+  background: #f8f8f8;
+  border-radius: 500px;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+  */
+
+/* Tire Service Section */
 .tire-service {
   text-align: center;
   padding: 50px;
