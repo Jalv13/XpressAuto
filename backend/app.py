@@ -805,6 +805,102 @@ def get_reviews():
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
 
+# INVOICES
+
+
+@app.route("/api/create-invoice", methods=["POST"])
+def create_invoice():
+    data = request.json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (data["email"],))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+
+        cursor.execute(
+            """
+            INSERT INTO invoices (user_id, vehicle_id, invoice_number, subtotal, tax_amount, discount_amount, total_amount, status, due_date, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING invoice_id;
+        """,
+            (
+                user["user_id"],
+                data["vehicle_id"],
+                data["invoice_number"],
+                data["subtotal"],
+                data["tax_amount"],
+                data["discount_amount"],
+                data["total_amount"],
+                data["status"],
+                data["due_date"],
+                data["notes"],
+            ),
+        )
+
+        invoice_id = cursor.fetchone()["invoice_id"]
+
+        for item in data["items"]:
+            cursor.execute(
+                """
+                INSERT INTO invoice_items (invoice_id, service_id, history_id, description, quantity, unit_price, discount_amount, total_price)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s);
+            """,
+                (
+                    invoice_id,
+                    item["service_id"],
+                    item["history_id"],
+                    item["description"],
+                    item["quantity"],
+                    item["unit_price"],
+                    item["discount_amount"],
+                    item["total_price"],
+                ),
+            )
+
+        conn.commit()
+        return jsonify({"status": "success", "invoice_id": invoice_id}), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# Get Invoice
+@app.route("/api/get-user-invoices", methods=["GET"])
+@login_required
+def get_user_invoices():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT invoice_id, invoice_number, subtotal, tax_amount, discount_amount, 
+                   total_amount, status, issue_date, due_date, notes,
+                   v.make, v.model, v.year
+            FROM invoices i
+            LEFT JOIN vehicles v ON i.vehicle_id = v.vehicle_id
+            WHERE i.user_id = %s
+            ORDER BY i.issue_date DESC;
+        """,
+            (current_user.id,),
+        )
+
+        invoices = cursor.fetchall()
+
+        return jsonify({"status": "success", "invoices": invoices}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
 # NOTIFICATIONS
 
 
@@ -921,7 +1017,7 @@ def get_loyalty_points():
         conn.close()
 
 
-# Add points after service completion
+# Add points
 @app.route("/api/add-loyalty-points", methods=["POST"])
 @login_required
 def add_loyalty_points():
@@ -967,30 +1063,26 @@ def add_loyalty_points():
         conn.close()
 
 
-#   MEDIA API
-
-
-def allowed_file(filename):
-    """Check if the file has an allowed extension"""
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+#   MEDIA API's
 
 
 @app.route("/api/upload-media", methods=["POST"])
 @login_required
 def upload_media():
-    """Uploads media files to AWS S3 and stores metadata in the database."""
     if "file" not in request.files:
         return jsonify({"status": "error", "message": "No file uploaded"}), 400
 
     file = request.files["file"]
+
     if file.filename == "":
-        return jsonify({"status": "error", "message": "No selected file"}), 400
+        return jsonify({"status": "error", "message": "No file selected"}), 400
 
-    if not allowed_file(file.filename):
-        return jsonify({"status": "error", "message": "File type not allowed"}), 400
+    vehicle_id = request.form.get("vehicle_id")
+    description = request.form.get("description", "")
+    title = secure_filename(file.filename)  # using filename as title by default
+    media_type = "image"
 
-    # Secure filename and determine content type
-    filename = secure_filename(file.filename)
+    filename = f"media_{uuid.uuid4().hex}_{secure_filename(file.filename)}"
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
     try:
@@ -1000,135 +1092,178 @@ def upload_media():
             S3_BUCKET_NAME,
             filename,
             ExtraArgs={
-                "CacheControl": "public, max-age=86400",
-                "ContentType": "image/jpeg",
+                "ContentType": content_type,
+                "CacheControl": "max-age=86400",
                 "ACL": "public-read",
-                # TODO: Probably want to change this, its not secure
             },
         )
 
-        # Construct file URL
         file_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
 
-        # Store file info in the database
+        # Insert into database
         conn = get_db_connection()
         cursor = conn.cursor()
+
         cursor.execute(
             """
-            INSERT INTO media (user_id, media_type, file_url, title, description)
-            VALUES (%s, %s, %s, %s, %s) RETURNING media_id
+            INSERT INTO media (
+                user_id, vehicle_id, media_type, file_url, title, description, is_public
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING media_id
             """,
             (
                 current_user.id,
-                content_type,
+                vehicle_id if vehicle_id else None,
+                media_type,
                 file_url,
-                request.form.get("title", ""),
-                request.form.get("description", ""),
+                description or None,
+                title,
+                True,
             ),
         )
+
         media_id = cursor.fetchone()["media_id"]
         conn.commit()
-        cursor.close()
-        conn.close()
 
         return (
             jsonify(
                 {
                     "status": "success",
-                    "message": "File uploaded!",
-                    "file_url": file_url,
+                    "message": "Media uploaded successfully!",
                     "media_id": media_id,
+                    "file_url": file_url,
                 }
             ),
             201,
         )
 
     except Exception as e:
+        print(f"Error uploading media: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-@app.route("/api/get-media", methods=["GET"])
-@login_required
-def get_user_media():
-    """Retrieves all media files uploaded by the logged-in user."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT media_id, file_url, title, description FROM media WHERE user_id = %s",
-            (current_user.id,),
-        )
-        media_files = cursor.fetchall()
+    finally:
         cursor.close()
         conn.close()
 
-        return jsonify({"status": "success", "media": media_files}), 200
 
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route("/api/get-media-url/<int:media_id>", methods=["GET"])
+@app.route("/api/get-user-media", methods=["GET"])
 @login_required
-def get_presigned_url(media_id):
-    """Generates a temporary presigned URL for a media file in S3."""
+def get_user_media():
+    conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        # Retrieve all media linked to the user's ID, along with associated vehicle info
         cursor.execute(
-            "SELECT file_url FROM media WHERE media_id = %s AND user_id = %s",
-            (media_id, current_user.id),
-        )
-        result = cursor.fetchone()
-
-        if not result:
-            return jsonify({"status": "error", "message": "File not found"}), 404
-
-        file_key = result["file_url"].split("/")[-1]
-
-        presigned_url = s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": S3_BUCKET_NAME, "Key": file_key},
-            ExpiresIn=3600,  # Link expires in 1 hour
+            """
+            SELECT 
+                m.media_id, m.vehicle_id, m.file_url, m.thumbnail_url, m.title, m.description, m.upload_date, m.media_type,
+                v.make, v.model, v.year, v.license_plate
+            FROM media m
+            LEFT JOIN vehicles v ON m.vehicle_id = v.vehicle_id
+            WHERE m.user_id = %s
+            ORDER BY m.upload_date DESC;
+        """,
+            (current_user.id,),
         )
 
-        return jsonify({"status": "success", "presigned_url": presigned_url}), 200
+        media_records = cursor.fetchall()
+
+        # Organize media by vehicle
+        vehicles_media = {}
+        for media in media_records:
+            vehicle_id = media["vehicle_id"] or "unassigned"
+
+            vehicle_info = {
+                "vehicle_id": vehicle_id,
+                "make": media.get("make", "Unassigned"),
+                "model": media.get("model", ""),
+                "year": media.get("year", ""),
+                "license_plate": media.get("license_plate", ""),
+            }
+
+            if vehicle_id not in vehicles_media:
+                vehicles_media[vehicle_id] = {"vehicle_info": vehicle_info, "media": []}
+
+            vehicles_media[vehicle_id]["media"].append(
+                {
+                    "media_id": media["media_id"],
+                    "file_url": media["file_url"],
+                    "thumbnail_url": media["thumbnail_url"],
+                    "title": media["title"],
+                    "description": media["description"],
+                    "upload_date": media["upload_date"],
+                    "media_type": media["media_type"],
+                }
+            )
+
+        # Convert the dictionary to a list for easier frontend handling
+        organized_media = list(vehicles_media.values())
+
+        return jsonify({"status": "success", "vehicles_media": organized_media}), 200
 
     except Exception as e:
+        conn.rollback()
+        print(f"Error fetching user media: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @app.route("/api/delete-media/<int:media_id>", methods=["DELETE"])
 @login_required
 def delete_media(media_id):
-    """Deletes a media file from both S3 and the database."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        # First, verify media ownership and retrieve URL for deletion from S3
         cursor.execute(
-            "SELECT file_url FROM media WHERE media_id = %s AND user_id = %s",
+            """
+            SELECT file_url FROM media
+            WHERE media_id = %s AND user_id = %s
+        """,
             (media_id, current_user.id),
         )
-        result = cursor.fetchone()
 
-        if not result:
-            return jsonify({"status": "error", "message": "File not found"}), 404
+        media = cursor.fetchone()
 
-        file_key = result["file_url"].split("/")[-1]
+        if not media:
+            return (
+                jsonify(
+                    {"status": "error", "message": "Media not found or unauthorized"}
+                ),
+                404,
+            )
+
+        file_url = media["file_url"]
+
+        # Delete media record from database
+        cursor.execute(
+            """
+            DELETE FROM media WHERE media_id = %s AND user_id = %s
+        """,
+            (media_id, current_user.id),
+        )
+        conn.commit()
+
+        # Extract S3 object key from file_url
+        file_key = file_url.split(
+            f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/"
+        )[-1]
 
         # Delete from S3
         s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=file_key)
 
-        # Delete from database
-        cursor.execute("DELETE FROM media WHERE media_id = %s", (media_id,))
-        conn.commit()
-
         return (
-            jsonify({"status": "success", "message": "File deleted successfully"}),
+            jsonify({"status": "success", "message": "Media deleted successfully"}),
             200,
         )
 
     except Exception as e:
+        conn.rollback()
+        print(f"Error deleting media: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
     finally:
@@ -1155,7 +1290,6 @@ def upload_profile_photo():
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
     try:
-        # Include ACL: public-read to make the object accessible
         s3_client.upload_fileobj(
             file,
             S3_BUCKET_NAME,
@@ -1163,7 +1297,7 @@ def upload_profile_photo():
             ExtraArgs={
                 "CacheControl": "public, max-age=86400",
                 "ContentType": content_type,
-                "ACL": "public-read",  # <-- Add this line
+                "ACL": "public-read",  # Include ACL: public-read to make the object accessible
             },
         )
         file_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
