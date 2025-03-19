@@ -24,6 +24,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import boto3
 import mimetypes
+import uuid
 import requests
 from dotenv import load_dotenv
 
@@ -209,12 +210,13 @@ def get_user():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT first_name, last_name FROM users WHERE user_id = %s",
+            "SELECT first_name, last_name, profile_picture_url FROM users WHERE user_id = %s",
             (current_user.id,),
         )
         user_details = cursor.fetchone() or {}
         first_name = user_details.get("first_name", "")
         last_name = user_details.get("last_name", "")
+        profile_photo = user_details.get("profile_picture_url", "")
         name = (
             f"{first_name} {last_name}".strip()
             if (first_name or last_name)
@@ -228,12 +230,13 @@ def get_user():
                     "first_name": first_name,
                     "last_name": last_name,
                     "name": name,
+                    "profile_picture_url": profile_photo,
                 }
             ),
             200,
         )
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
@@ -274,12 +277,6 @@ def add_user():
         )
         new_user_id = cursor.fetchone()["user_id"]
         conn.commit()
-
-         # Create User object and log them in automatically
-        user = User(new_user_id, data["email"])
-        login_user(user)
-
-        
         return (
             jsonify(
                 {
@@ -387,7 +384,7 @@ def add_vehicle():
     try:
         cursor.execute(
             "INSERT INTO vehicles (user_id, make, model, year, vin, license_plate, color, mileage, engine_type, transmission, is_primary) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING vehicle_id",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING vehicle_id",
             (
                 current_user.id,
                 data["make"],
@@ -402,6 +399,7 @@ def add_vehicle():
                 data.get("is_primary", False),
             ),
         )
+
         new_vehicle_id = cursor.fetchone()["vehicle_id"]
         conn.commit()
         return (
@@ -476,239 +474,6 @@ def update_vehicle(vehicle_id):
 
         conn.commit()
         return jsonify({"status": "success", "message": "Vehicle updated!"}), 200
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# Delete a vehicle
-@app.route("/api/delete-vehicle/<int:vehicle_id>", methods=["DELETE"])
-@login_required
-def delete_vehicle(vehicle_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "DELETE FROM vehicles WHERE vehicle_id = %s AND user_id = %s RETURNING vehicle_id",
-            (vehicle_id, current_user.id),
-        )
-        deleted_vehicle = cursor.fetchone()
-        if not deleted_vehicle:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Vehicle not found or not authorized",
-                    }
-                ),
-                404,
-            )
-
-        conn.commit()
-        return jsonify({"status": "success", "message": "Vehicle deleted!"}), 200
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# SERVICE HISTORY
-# # Add service history
-@app.route("/api/add-service-history", methods=["POST"])
-@login_required
-def add_service_history():
-    data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "INSERT INTO service_history (vehicle_id, user_id, service_id, service_date, mileage_at_service, technician_id, price, notes, status) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING history_id",
-            (
-                data["vehicle_id"],
-                current_user.id,
-                data["service_id"],
-                data["service_date"],
-                data.get("mileage_at_service"),
-                data.get("technician_id"),
-                data["price"],
-                data.get("notes", ""),
-                data.get("status", "completed"),
-            ),
-        )
-        history_id = cursor.fetchone()["history_id"]
-        conn.commit()
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Service history added!",
-                    "history_id": history_id,
-                }
-            ),
-            201,
-        )
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# PAYMENT INVOICES
-# # Pay an invoice
-@app.route("/api/pay-invoice/<int:invoice_id>", methods=["POST"])
-@login_required
-def pay_invoice(invoice_id):
-    data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "INSERT INTO payments (invoice_id, payment_method, amount, transaction_id) VALUES (%s, %s, %s, %s) RETURNING payment_id",
-            (
-                invoice_id,
-                data["payment_method"],
-                data["amount"],
-                data.get("transaction_id"),
-            ),
-        )
-        payment_id = cursor.fetchone()["payment_id"]
-
-        # Mark invoice as paid
-        cursor.execute(
-            "UPDATE invoices SET status = 'paid' WHERE invoice_id = %s", (invoice_id,)
-        )
-        conn.commit()
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Invoice paid successfully!",
-                    "payment_id": payment_id,
-                }
-            ),
-            200,
-        )
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# SERVICES AND SERVICE CATEGORIES
-# # Get all service categories
-@app.route("/api/service-categories", methods=["GET"])
-def get_service_categories():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("SELECT category_id, name, description FROM service_categories;")
-        categories = cursor.fetchall()
-        return jsonify({"status": "success", "categories": categories}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# Add a new service category
-@app.route("/api/add-service-category", methods=["POST"])
-@login_required
-def add_service_category():
-    data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "INSERT INTO service_categories (name, description) VALUES (%s, %s) RETURNING category_id",
-            (data["name"], data.get("description", "")),
-        )
-        category_id = cursor.fetchone()["category_id"]
-        conn.commit()
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Service category added!",
-                    "category_id": category_id,
-                }
-            ),
-            201,
-        )
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# Get all services
-@app.route("/api/services", methods=["GET"])
-def get_services():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "SELECT service_id, category_id, name, description, base_price, estimated_hours, is_active FROM services;"
-        )
-        services = cursor.fetchall()
-        return jsonify({"status": "success", "services": services}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# Add a new service
-@app.route("/api/add-service", methods=["POST"])
-@login_required
-def add_service():
-    data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "INSERT INTO services (category_id, name, description, base_price, estimated_hours, is_active) VALUES (%s, %s, %s, %s, %s, %s) RETURNING service_id",
-            (
-                data["category_id"],
-                data["name"],
-                data["description"],
-                data["base_price"],
-                data.get("estimated_hours", 0),
-                data.get("is_active", True),
-            ),
-        )
-        service_id = cursor.fetchone()["service_id"]
-        conn.commit()
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Service added!",
-                    "service_id": service_id,
-                }
-            ),
-            201,
-        )
     except Exception as e:
         conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -792,10 +557,9 @@ def get_reviews():
 def get_notifications():
     conn = get_db_connection()
     cursor = conn.cursor()
-
     try:
         cursor.execute(
-            "SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC",
+            "SELECT * FROM notifications WHERE user_id = %s AND is_read = FALSE ORDER BY created_at DESC",
             (current_user.id,),
         )
         notifications = cursor.fetchall()
@@ -807,24 +571,65 @@ def get_notifications():
         conn.close()
 
 
-# Mark a notification as read
-@app.route("/api/read-notification/<int:notification_id>", methods=["PUT"])
-@login_required
-def read_notification(notification_id):
+@app.route("/api/send-notification", methods=["POST"])
+def send_notification():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    title = data.get("title", "Notification")
+    message = data.get("message", "")
+    notification_type = data.get("type", "info")  # default type
+    related_id = data.get("related_id")  # optional
+
     conn = get_db_connection()
     cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO notifications (user_id, title, message, type, related_id)
+            VALUES (%s, %s, %s, %s, %s) RETURNING notification_id
+            """,
+            (user_id, title, message, notification_type, related_id),
+        )
+        notification_id = cursor.fetchone()["notification_id"]
+        conn.commit()
+        return jsonify({"status": "success", "notification_id": notification_id}), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
+
+@app.route("/api/mark-notification-read/<int:notification_id>", methods=["PUT"])
+@login_required
+def mark_notification_read(notification_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
     try:
         cursor.execute(
             "UPDATE notifications SET is_read = TRUE WHERE notification_id = %s AND user_id = %s",
             (notification_id, current_user.id),
         )
+        if cursor.rowcount == 0:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Notification not found or not authorized",
+                    }
+                ),
+                404,
+            )
+
         conn.commit()
         return (
             jsonify({"status": "success", "message": "Notification marked as read"}),
             200,
         )
+
     except Exception as e:
+        conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()
@@ -986,6 +791,8 @@ def upload_media():
             ExtraArgs={
                 "CacheControl": "public, max-age=86400",
                 "ContentType": "image/jpeg",
+                "ACL": "public-read",
+                # TODO: Probably want to change this, its not secure
             },
         )
 
@@ -1116,6 +923,64 @@ def delete_media(media_id):
     finally:
         cursor.close()
         conn.close()
+
+
+# USER PROFILE TEST POINT
+@app.route("/api/upload-profile-photo", methods=["POST"])
+@login_required
+def upload_profile_photo():
+    if "file" not in request.files:
+        return jsonify({"success": False, "message": "No file uploaded"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"success": False, "message": "No file selected"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"success": False, "message": "File type not allowed"}), 400
+
+    filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    try:
+        # Include ACL: public-read to make the object accessible
+        s3_client.upload_fileobj(
+            file,
+            S3_BUCKET_NAME,
+            filename,
+            ExtraArgs={
+                "CacheControl": "public, max-age=86400",
+                "ContentType": content_type,
+                "ACL": "public-read",  # <-- Add this line
+            },
+        )
+        file_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "UPDATE users SET profile_picture_url = %s WHERE user_id = %s RETURNING profile_picture_url",
+            (file_url, current_user.id),
+        )
+        updated = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Profile photo updated",
+                    "profile_picture_url": updated["profile_picture_url"],
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # APPLICATION ENTRY POINT

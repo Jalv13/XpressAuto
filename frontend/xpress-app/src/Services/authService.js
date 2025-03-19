@@ -130,4 +130,24 @@ export const authService = {
       };
     }
   },
+
+  uploadProfilePhoto: async (formData) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/upload-profile-photo`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Profile photo upload error:", error);
+      return {
+        success: false,
+        error: error.response?.data?.message || "Profile photo upload failed",
+      };
+    }
+  },
 };
