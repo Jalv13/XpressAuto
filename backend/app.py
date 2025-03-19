@@ -384,7 +384,7 @@ def add_vehicle():
     try:
         cursor.execute(
             "INSERT INTO vehicles (user_id, make, model, year, vin, license_plate, color, mileage, engine_type, transmission, is_primary) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING vehicle_id",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING vehicle_id",
             (
                 current_user.id,
                 data["make"],
@@ -399,6 +399,7 @@ def add_vehicle():
                 data.get("is_primary", False),
             ),
         )
+
         new_vehicle_id = cursor.fetchone()["vehicle_id"]
         conn.commit()
         return (

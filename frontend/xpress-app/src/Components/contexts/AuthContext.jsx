@@ -14,25 +14,34 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check if user is authenticated on initial load
+  // Check if user is authenticated on initial load with a minimum delay
   useEffect(() => {
     const checkAuthStatus = async () => {
+      const startTime = Date.now();
       try {
         const response = await axios.get(`${API_URL}/user`);
-        // Expecting the backend to return profile_picture_url along with other user info.
         console.log("Authenticated user:", response.data);
         setUser(response.data);
       } catch (error) {
-        console.log("User not authenticated"); // User is not logged in, this is expected behavior
+        console.log("User not authenticated");
       } finally {
-        setLoading(false);
+        // Ensure the loading state lasts at least minDelay
+        const elapsed = Date.now() - startTime;
+        const minDelay = 5000; // Adjust as needed (5000ms is 5 seconds)
+        if (elapsed < minDelay) {
+          setTimeout(() => {
+            setLoading(false);
+          }, minDelay - elapsed);
+        } else {
+          setLoading(false);
+        }
       }
     };
 
     checkAuthStatus();
   }, []);
 
-  // Login function
+  // Login function remains unchanged
   const login = async (email, password) => {
     try {
       const response = await fetch(`${API_URL}/login`, {
@@ -43,7 +52,6 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await response.json();
       if (response.ok) {
-        // Ensure that the user object saved includes profile_picture_url (from backend)
         localStorage.setItem("user", JSON.stringify(data.user));
         setUser(data.user);
         return true;
@@ -58,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  // Logout function remains unchanged
   const logout = async () => {
     try {
       await axios.post(`${API_URL}/logout`);
