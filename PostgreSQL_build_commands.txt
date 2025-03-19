@@ -48,7 +48,9 @@ CREATE TABLE vehicles (
     engine_type VARCHAR(50),
     transmission VARCHAR(30),
     date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_primary BOOLEAN DEFAULT FALSE
+    is_primary BOOLEAN DEFAULT FALSE,
+    vehicle_image_url VARCHAR(255),vehicle_status VARCHAR(10) DEFAULT 'OffLot' 
+      CHECK (vehicle_status IN ('Waiting', 'Active', 'OffLot'))
 );
 
 # Create Service Categories Table

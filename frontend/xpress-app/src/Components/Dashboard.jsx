@@ -12,11 +12,16 @@ function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [theme, setTheme] = useState("light");
+  const [message, setMessage] = useState(""); // Add message state for feedback
+
+  const [vehiclePhotoFile, setVehiclePhotoFile] = useState(null);
+  const [vehiclePhotoPreview, setVehiclePhotoPreview] = useState("");
 
   // State for toggling the Add Vehicle form
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   // State for vehicle form data (extended to match your table)
   const [vehicleData, setVehicleData] = useState({
+    vehicle_id: null, // Added for editing vehicles
     make: "",
     model: "",
     year: "",
@@ -27,6 +32,7 @@ function Dashboard() {
     engine_type: "",
     transmission: "",
     is_primary: false,
+    vehicle_image_url: "", // Matching DB column name
   });
 
   // Fetch loyalty points, notifications, and vehicles on mount
@@ -58,12 +64,68 @@ function Dashboard() {
     }
   }, [user]);
 
+  const handleVehiclePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setVehiclePhotoFile(file);
+      setVehiclePhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Upload Vehicle photo to backend (which uploads to S3 and updates DB)
+  const handleVehiclePhotoUpload = async () => {
+    if (!vehiclePhotoFile) return null; // Return null if no file
+
+    const formData = new FormData();
+    formData.append("file", vehiclePhotoFile);
+
+    // If we have a vehicle ID (for existing vehicles), include it in the request
+    if (vehicleData.vehicle_id) {
+      formData.append("vehicle_id", vehicleData.vehicle_id);
+    }
+
+    try {
+      setMessage("Uploading photo...");
+      console.log("Uploading vehicle photo...");
+
+      const response = await axios.post(
+        "http://localhost:5000/api/upload-vehicle-photo",
+        formData,
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      console.log("Upload response:", response.data);
+
+      if (response.data.status === "success") {
+        setMessage("Vehicle photo uploaded successfully");
+        return response.data.vehicle_image_url; // Return the URL on success
+      } else {
+        setMessage(response.data.message || "Vehicle photo upload failed");
+        console.error("Upload failed:", response.data.message);
+        return null; // Return null on failure
+      }
+    } catch (error) {
+      console.error("Error uploading vehicle photo:", error);
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+      }
+      setMessage("Error uploading vehicle photo");
+      return null; // Return null on error
+    }
+  };
+
   // Function to fetch vehicles for the user
   const fetchVehicles = () => {
     axios
       .get("http://localhost:5000/api/get-vehicles", { withCredentials: true })
       .then((res) => {
         if (res.data.status === "success") {
+          console.log("Vehicles fetched:", res.data.vehicles);
           setVehicles(res.data.vehicles);
         }
       })
@@ -103,31 +165,53 @@ function Dashboard() {
     setVehicleData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle checkbox change for is_primary
-  const handlePrimaryChange = (e) => {
-    setVehicleData((prev) => ({ ...prev, is_primary: e.target.checked }));
-  };
-
   // Handle form submission for adding a vehicle
   const handleAddVehicleSubmit = async (e) => {
     e.preventDefault();
+    setMessage("Processing vehicle information...");
+
     try {
+      // Data to submit to the backend
+      let dataToSubmit = { ...vehicleData };
+
+      // If we have a vehicle photo file, upload it first
+      if (vehiclePhotoFile) {
+        console.log("Uploading vehicle photo before adding vehicle");
+        const imageUrl = await handleVehiclePhotoUpload();
+
+        console.log("Received image URL:", imageUrl);
+
+        if (imageUrl) {
+          // Update the data to include the image URL
+          dataToSubmit.vehicle_image_url = imageUrl;
+          console.log("Updated data with image URL");
+        } else {
+          console.warn("Image upload failed or returned no URL");
+        }
+      }
+
+      // Remove vehicle_id if it's null (for new vehicles)
+      if (!dataToSubmit.vehicle_id) {
+        delete dataToSubmit.vehicle_id;
+      }
+
+      console.log("Submitting vehicle data:", dataToSubmit);
+
       const res = await axios.post(
         "http://localhost:5000/api/add-vehicle",
-        vehicleData,
+        dataToSubmit,
         { withCredentials: true }
       );
+
+      console.log("Add vehicle response:", res.data);
+
       if (res.data.status === "success") {
-        // Optimistically update vehicles state with the new vehicle
-        const newVehicle = {
-          ...vehicleData,
-          vehicle_id: res.data.vehicle_id,
-          // Optionally add date_added from API or set it to current date/time
-          date_added: new Date().toISOString(),
-        };
-        setVehicles((prev) => [...prev, newVehicle]);
+        // Fetch vehicles from server instead of optimistically updating
+        fetchVehicles();
+
         // Reset the form and hide the container
         setVehicleData({
+          vehicle_id: null,
           make: "",
           model: "",
           year: "",
@@ -138,13 +222,21 @@ function Dashboard() {
           engine_type: "",
           transmission: "",
           is_primary: false,
+          vehicle_image_url: "",
         });
+        setVehiclePhotoFile(null);
+        setVehiclePhotoPreview("");
         setShowAddVehicle(false);
+        setMessage("Vehicle added successfully");
       } else {
-        console.error("Error adding vehicle:", res.data.message);
+        setMessage(res.data.message || "Error adding vehicle");
       }
     } catch (error) {
       console.error("Error adding vehicle:", error);
+      if (error.response) {
+        console.error("Server error response:", error.response.data);
+      }
+      setMessage("Error adding vehicle");
     }
   };
 
@@ -216,6 +308,22 @@ function Dashboard() {
             ></div>
           </div>
         </section>
+
+        {/* Status message */}
+        {message && (
+          <div
+            className="status-message"
+            style={{
+              textAlign: "center",
+              padding: "10px",
+              margin: "10px 0",
+              backgroundColor: "#f0f8ff",
+              borderRadius: "5px",
+            }}
+          >
+            {message}
+          </div>
+        )}
 
         {/* Stats Section */}
         <section className="dashboard-stats">
@@ -401,8 +509,50 @@ function Dashboard() {
                     placeholder="Enter transmission type"
                   />
                 </div>
+                <div className="form-group vehicle-photo-section">
+                  <label htmlFor="vehiclePhoto">Vehicle Photo</label>
+                  <div className="vehicle-photo-preview">
+                    {vehiclePhotoPreview || vehicleData.vehicle_image_url ? (
+                      <img
+                        src={
+                          vehiclePhotoPreview || vehicleData.vehicle_image_url
+                        }
+                        alt="Vehicle"
+                        style={{
+                          width: "150px",
+                          height: "150px",
+                          borderRadius: "8px",
+                          objectFit: "cover",
+                          marginBottom: "10px",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "150px",
+                          height: "150px",
+                          backgroundColor: "#f0f0f0",
+                          borderRadius: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        No Image
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    id="vehiclePhoto"
+                    name="vehiclePhoto"
+                    accept="image/*"
+                    onChange={handleVehiclePhotoChange}
+                  />
+                </div>
                 <button type="submit" className="submit-button">
-                  Submit Vehicle
+                  Add Vehicle
                 </button>
               </form>
             </div>
@@ -410,42 +560,159 @@ function Dashboard() {
         )}
 
         {/* Vehicles Display Section */}
-        <section className="vehicles-display">
-          <h2>Your Vehicles</h2>
+        <section className="vehicles-display" style={{ margin: "20px 0" }}>
+          <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
+            Your Vehicles
+          </h2>
           {vehicles.length > 0 ? (
-            <div className="vehicles-grid">
-              {vehicles.map((vehicle) => (
-                <div key={vehicle.vehicle_id} className="vehicle-card">
-                  <h3>
-                    {vehicle.make} {vehicle.model}
-                  </h3>
-                  <p>Year: {vehicle.year}</p>
-                  {vehicle.vin && <p>VIN: {vehicle.vin}</p>}
-                  {vehicle.license_plate && (
-                    <p>Plate: {vehicle.license_plate}</p>
-                  )}
-                  {vehicle.color && <p>Color: {vehicle.color}</p>}
-                  {vehicle.mileage !== null && (
-                    <p>Mileage: {vehicle.mileage}</p>
-                  )}
-                  {vehicle.engine_type && <p>Engine: {vehicle.engine_type}</p>}
-                  {vehicle.transmission && (
-                    <p>Transmission: {vehicle.transmission}</p>
-                  )}
-                  {vehicle.is_primary && (
-                    <p>
-                      <strong>Primary Vehicle</strong>
+            <div
+              className="vehicles-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+                gap: "20px",
+                padding: "0 15px",
+              }}
+            >
+              {vehicles.map((vehicle) => {
+                // Debug vehicle image URL
+                console.log(
+                  `Vehicle ${vehicle.vehicle_id} image URL:`,
+                  vehicle.vehicle_image_url
+                );
+
+                return (
+                  <div
+                    key={vehicle.vehicle_id}
+                    className="vehicle-card"
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                      padding: "15px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      backgroundColor: "#fff",
+                    }}
+                  >
+                    {/* Only show image if vehicle_image_url exists and is not null/empty */}
+                    {vehicle.vehicle_image_url &&
+                    vehicle.vehicle_image_url.trim() !== "" ? (
+                      <div
+                        style={{ marginBottom: "15px", textAlign: "center" }}
+                      >
+                        <img
+                          src={vehicle.vehicle_image_url}
+                          alt={`${vehicle.make} ${vehicle.model}`}
+                          style={{
+                            width: "120px",
+                            height: "120px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            border: "1px solid #eee",
+                          }}
+                          onError={(e) => {
+                            console.error(
+                              `Error loading image for vehicle ${vehicle.vehicle_id}:`,
+                              e
+                            );
+                            e.target.onerror = null; // Prevent infinite loop
+                            e.target.src =
+                              "https://via.placeholder.com/120?text=No+Image"; // Fallback image
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        style={{ marginBottom: "15px", textAlign: "center" }}
+                      >
+                        <div
+                          style={{
+                            width: "120px",
+                            height: "120px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto",
+                            backgroundColor: "#f5f5f5",
+                            borderRadius: "8px",
+                            border: "1px solid #eee",
+                            color: "#888",
+                            fontSize: "12px",
+                          }}
+                        >
+                          No Image
+                        </div>
+                      </div>
+                    )}
+
+                    <h3 style={{ margin: "0 0 10px 0" }}>
+                      {vehicle.make} {vehicle.model}
+                    </h3>
+                    <p style={{ margin: "5px 0" }}>Year: {vehicle.year}</p>
+                    {vehicle.vin && (
+                      <p style={{ margin: "5px 0" }}>VIN: {vehicle.vin}</p>
+                    )}
+                    {vehicle.license_plate && (
+                      <p style={{ margin: "5px 0" }}>
+                        Plate: {vehicle.license_plate}
+                      </p>
+                    )}
+                    {vehicle.color && (
+                      <p style={{ margin: "5px 0" }}>Color: {vehicle.color}</p>
+                    )}
+                    {vehicle.mileage !== null && (
+                      <p style={{ margin: "5px 0" }}>
+                        Mileage: {vehicle.mileage}
+                      </p>
+                    )}
+                    {vehicle.engine_type && (
+                      <p style={{ margin: "5px 0" }}>
+                        Engine: {vehicle.engine_type}
+                      </p>
+                    )}
+                    {vehicle.transmission && (
+                      <p style={{ margin: "5px 0" }}>
+                        Transmission: {vehicle.transmission}
+                      </p>
+                    )}
+                    {vehicle.is_primary && (
+                      <p style={{ margin: "10px 0 5px 0" }}>
+                        <strong>Primary Vehicle</strong>
+                      </p>
+                    )}
+                    <p
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "#666",
+                        marginTop: "10px",
+                        borderTop: "1px solid #eee",
+                        paddingTop: "10px",
+                      }}
+                    >
+                      Date Added:{" "}
+                      {new Date(vehicle.date_added).toLocaleDateString()}
                     </p>
-                  )}
-                  <p>
-                    Date Added:{" "}
-                    {new Date(vehicle.date_added).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <p>You have not added any vehicles yet.</p>
+            <div style={{ textAlign: "center", padding: "20px" }}>
+              <p>You have not added any vehicles yet.</p>
+              <button
+                onClick={() => setShowAddVehicle(true)}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#4CAF50",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  marginTop: "10px",
+                }}
+              >
+                Add Your First Vehicle
+              </button>
+            </div>
           )}
         </section>
       </main>
