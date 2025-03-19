@@ -32,6 +32,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "webp"}
+
+
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -373,73 +376,100 @@ def delete_user(user_id):
 # VEHICLES
 
 
-# Add a vehicle
-# Update this function in your Flask application to include vehicle_image_url
-
-
 @app.route("/api/add-vehicle", methods=["POST"])
 @login_required
 def add_vehicle():
     data = request.get_json()
+    print("==== ADD VEHICLE DEBUG ====")
+    print(f"Current user ID: {current_user.id}")
+    print(f"Raw data received: {data}")
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
+        # Get is_primary value (default to False if not provided)
+        is_primary = data.get("is_primary", False)
+        print(f"is_primary: {is_primary}, type: {type(is_primary)}")
+
+        # Get the vehicle status from data or use default 'OffLot'
+        vehicle_status = data.get("vehicle_status", "OffLot")
+        print(f"vehicle_status: {vehicle_status}")
+
+        # Make sure it's one of the allowed values
+        if vehicle_status not in ["Waiting", "Active", "OffLot"]:
+            vehicle_status = "OffLot"  # Default to OffLot if invalid
+            print(f"Adjusted vehicle_status to: {vehicle_status}")
+
         # Check if we need to include vehicle_image_url in the query
-        if data.get("vehicle_image_url"):
-            cursor.execute(
-                """
+        vehicle_image_url = data.get("vehicle_image_url")
+        print(f"vehicle_image_url: {vehicle_image_url}")
+
+        if vehicle_image_url:
+            sql_query = """
                 INSERT INTO vehicles (
                     user_id, make, model, year, vin, license_plate, 
-                    color, mileage, engine_type, transmission, 
-                    is_primary, vehicle_image_url
+                    color, mileage, engine_type, transmission,
+                    is_primary, vehicle_image_url, vehicle_status
+                ) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                RETURNING vehicle_id
+                """
+
+            params = (
+                current_user.id,
+                data["make"],
+                data["model"],
+                data["year"],
+                data.get("vin") or None,  # Convert empty string to None
+                data.get("license_plate") or None,
+                data.get("color") or None,
+                data.get("mileage") or None,
+                data.get("engine_type") or None,
+                data.get("transmission") or None,
+                is_primary,
+                vehicle_image_url,
+                vehicle_status,
+            )
+
+            print(f"SQL query (with image): {sql_query}")
+            print(f"SQL params (with image): {params}")
+
+            cursor.execute(sql_query, params)
+        else:
+            sql_query = """
+                INSERT INTO vehicles (
+                    user_id, make, model, year, vin, license_plate, 
+                    color, mileage, engine_type, transmission,
+                    is_primary, vehicle_status
                 ) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
                 RETURNING vehicle_id
-                """,
-                (
-                    current_user.id,
-                    data["make"],
-                    data["model"],
-                    data["year"],
-                    data.get("vin"),
-                    data.get("license_plate"),
-                    data.get("color"),
-                    data.get("mileage"),
-                    data.get("engine_type"),
-                    data.get("transmission"),
-                    data.get("is_primary", False),
-                    data.get("vehicle_image_url"),
-                ),
-            )
-        else:
-            # Original query without vehicle_image_url
-            cursor.execute(
                 """
-                INSERT INTO vehicles (
-                    user_id, make, model, year, vin, license_plate, 
-                    color, mileage, engine_type, transmission, is_primary
-                ) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
-                RETURNING vehicle_id
-                """,
-                (
-                    current_user.id,
-                    data["make"],
-                    data["model"],
-                    data["year"],
-                    data.get("vin"),
-                    data.get("license_plate"),
-                    data.get("color"),
-                    data.get("mileage"),
-                    data.get("engine_type"),
-                    data.get("transmission"),
-                    data.get("is_primary", False),
-                ),
+
+            params = (
+                current_user.id,
+                data["make"],
+                data["model"],
+                data["year"],
+                data.get("vin") or None,
+                data.get("license_plate") or None,
+                data.get("color") or None,
+                data.get("mileage") or None,
+                data.get("engine_type") or None,
+                data.get("transmission") or None,
+                is_primary,
+                vehicle_status,
             )
+
+            print(f"SQL query (without image): {sql_query}")
+            print(f"SQL params (without image): {params}")
+
+            cursor.execute(sql_query, params)
 
         new_vehicle_id = cursor.fetchone()["vehicle_id"]
         conn.commit()
+        print(f"Vehicle added successfully with ID: {new_vehicle_id}")
         return (
             jsonify(
                 {
@@ -452,10 +482,16 @@ def add_vehicle():
         )
     except Exception as e:
         conn.rollback()
+        print(f"Error adding vehicle: {str(e)}")
+        import traceback
+
+        print("Full traceback:")
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
+        print("==== END ADD VEHICLE DEBUG ====")
 
 
 # Get all vehicles for the logged-in user
@@ -527,6 +563,7 @@ def upload_vehicle_photo():
     """Handles upload of vehicle photos to S3 and updates vehicle records"""
     # Check if file is present in request
     if "file" not in request.files:
+        print("No file part in request")
         return jsonify({"status": "error", "message": "No file uploaded"}), 400
 
     file = request.files["file"]
@@ -534,21 +571,30 @@ def upload_vehicle_photo():
 
     # Validate file
     if file.filename == "":
+        print("No selected file")
         return jsonify({"status": "error", "message": "No file selected"}), 400
 
     if not allowed_file(file.filename):
+        print(f"File type not allowed: {file.filename}")
         return jsonify({"status": "error", "message": "File type not allowed"}), 400
 
     # Create unique filename
     filename = f"vehicle_{uuid.uuid4().hex}_{secure_filename(file.filename)}"
-
-    # Properly detect content type based on file extension
     content_type = mimetypes.guess_type(filename)[0] or "image/jpeg"
 
-    # Debug logging
-    print(f"Uploading file: {filename}, Content-Type: {content_type}")
+    print(f"Processing upload for file: {filename}, content_type: {content_type}")
+    print(f"S3 bucket name: {S3_BUCKET_NAME}, AWS region: {AWS_REGION}")
+
+    # Verify AWS credentials are available
+    if not AWS_ACCESS_KEY or not AWS_SECRET_KEY or not AWS_REGION or not S3_BUCKET_NAME:
+        print("ERROR: Missing AWS credentials or configuration")
+        return (
+            jsonify({"status": "error", "message": "Server configuration error"}),
+            500,
+        )
 
     try:
+        print("Attempting to upload file to S3...")
         # Upload to S3
         s3_client.upload_fileobj(
             file,
@@ -561,14 +607,15 @@ def upload_vehicle_photo():
             },
         )
 
+        print("File uploaded successfully to S3")
+
         # Construct the URL to the uploaded file
         file_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
-
-        # Debug logging
-        print(f"File uploaded successfully. URL: {file_url}")
+        print(f"Generated S3 URL: {file_url}")
 
         # If vehicle_id is provided, update the existing vehicle
         if vehicle_id and vehicle_id.isdigit():
+            print(f"Updating existing vehicle with ID: {vehicle_id}")
             conn = get_db_connection()
             cursor = conn.cursor()
 
@@ -582,6 +629,9 @@ def upload_vehicle_photo():
                 updated = cursor.fetchone()
                 if not updated:
                     # If no rows were updated, either the vehicle doesn't exist or doesn't belong to this user
+                    print(
+                        f"Vehicle not found or permission denied for update: {vehicle_id}"
+                    )
                     return (
                         jsonify(
                             {
@@ -593,13 +643,37 @@ def upload_vehicle_photo():
                     )
 
                 conn.commit()
+                print(f"Vehicle {vehicle_id} updated with image URL")
             except Exception as db_error:
                 conn.rollback()
-                print(f"Database error: {str(db_error)}")
+                print(f"Database error during vehicle update: {str(db_error)}")
                 raise db_error  # Re-raise to be caught by the outer try/except
             finally:
                 cursor.close()
                 conn.close()
+
+        # Return success response with the URL
+        print(f"Upload successful, returning URL: {file_url}")
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Vehicle photo uploaded successfully",
+                    "vehicle_image_url": file_url,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"ERROR uploading vehicle photo: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        return (
+            jsonify({"status": "error", "message": f"Error uploading file: {str(e)}"}),
+            500,
+        )
 
         # Return success response with the URL
         return (
@@ -893,53 +967,7 @@ def add_loyalty_points():
         conn.close()
 
 
-# Admin Dashboard API
-
-
-# Get system analytics (Admin Only)
-@app.route("/api/admin-dashboard", methods=["GET"])
-@login_required
-def admin_dashboard():
-    if not current_user.email.endswith("@admin.com"):  # Simple check for admin role
-        return jsonify({"status": "error", "message": "Unauthorized"}), 403
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("SELECT COUNT(*) AS total_users FROM users;")
-        total_users = cursor.fetchone()["total_users"]
-
-        cursor.execute("SELECT COUNT(*) AS total_services FROM service_history;")
-        total_services = cursor.fetchone()["total_services"]
-
-        cursor.execute(
-            "SELECT SUM(total_amount) AS total_revenue FROM invoices WHERE status = 'paid';"
-        )
-        total_revenue = cursor.fetchone()["total_revenue"]
-
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "total_users": total_users,
-                    "total_services": total_services,
-                    "total_revenue": total_revenue,
-                }
-            ),
-            200,
-        )
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
 #   MEDIA API
-
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf"}
 
 
 def allowed_file(filename):
