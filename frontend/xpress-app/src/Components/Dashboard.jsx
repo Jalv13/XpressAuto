@@ -5,6 +5,8 @@ import { useAuth } from "./contexts/AuthContext";
 import Header from "./Header";
 import Footer from "./Footer";
 import ContentLoader from "react-content-loader"; // For animated skeletons
+import Modal from "react-modal";
+import { Copy, Trash2, X } from "lucide-react";
 
 function Dashboard() {
   const { user, loading } = useAuth();
@@ -13,6 +15,16 @@ function Dashboard() {
   const [vehicles, setVehicles] = useState([]);
   const [theme, setTheme] = useState("light");
   const [message, setMessage] = useState(""); // Add message state for feedback
+  const [showPhotosModal, setShowPhotosModal] = useState(false);
+  const [vehiclesMedia, setVehiclesMedia] = useState([]);
+  const [mediaLoading, setVehiclesMediaLoading] = useState(false);
+  const [showAddPhotoForm, setShowAddPhotoForm] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [photoDescription, setPhotoDescription] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [showInvoicesModal, setShowInvoicesModal] = useState(false);
+  const [invoices, setInvoices] = useState([]);
 
   const [vehiclePhotoFile, setVehiclePhotoFile] = useState(null);
   const [vehiclePhotoPreview, setVehiclePhotoPreview] = useState("");
@@ -34,6 +46,54 @@ function Dashboard() {
     is_primary: false,
     vehicle_image_url: "", // Matching DB column name
   });
+
+  const fetchUserMedia = () => {
+    setMessage("Loading photos...");
+    axios
+      .get("http://localhost:5000/api/get-user-media", {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setVehiclesMedia(res.data.vehicles_media);
+          setMessage("");
+        } else {
+          setMessage("Failed to load photos.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching media:", err);
+        setMessage("Error loading photos.");
+      });
+  };
+
+  const handleCopyLink = (url) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setMessage("Photo link copied!");
+      setTimeout(() => setMessage(""), 2000); // Clears the message after 2 seconds
+    });
+  };
+
+  const handleDeleteMedia = (media_id) => {
+    if (!window.confirm("Are you sure you want to delete this photo?")) return;
+
+    axios
+      .delete(`http://localhost:5000/api/delete-media/${media_id}`, {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setMessage("Photo deleted successfully!");
+          fetchUserMedia(); // Refresh photos after deletion
+        } else {
+          setMessage(res.data.message || "Error deleting photo");
+        }
+      })
+      .catch((err) => {
+        console.error("Delete media error:", err);
+        setMessage("Error deleting photo");
+      });
+  };
 
   // Fetch loyalty points, notifications, and vehicles on mount
   useEffect(() => {
@@ -63,6 +123,56 @@ function Dashboard() {
       fetchVehicles();
     }
   }, [user]);
+
+  const handlePhotoFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleUploadNewPhoto = async (e) => {
+    e.preventDefault();
+
+    if (!photoFile || !selectedVehicleId) {
+      setMessage("Please select a vehicle and choose a photo.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", photoFile);
+    formData.append("vehicle_id", selectedVehicleId);
+    formData.append("description", photoDescription || "");
+
+    try {
+      setMessage("Uploading photo...");
+      const res = await axios.post(
+        "http://localhost:5000/api/upload-media",
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      if (res.data.status === "success") {
+        setMessage("Photo uploaded successfully!");
+        fetchUserMedia();
+        // Reset form fields
+        setPhotoFile(null);
+        setPhotoPreview("");
+        setPhotoDescription("");
+        setSelectedVehicleId("");
+        setShowAddPhotoForm(false);
+      } else {
+        setMessage(res.data.message || "Failed to upload photo.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      setMessage("An error occurred while uploading.");
+    }
+  };
 
   const handleVehiclePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -116,6 +226,48 @@ function Dashboard() {
       }
       setMessage("Error uploading vehicle photo");
       return null; // Return null on error
+    }
+  };
+  //add photo function
+  const handlePhotoFileUpload = async (e) => {
+    e.preventDefault();
+
+    if (!photoFile || !selectedVehicleId) {
+      setMessage("Please select a vehicle and a photo.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", photoFile);
+    formData.append("vehicle_id", selectedVehicleId);
+    formData.append("description", photoDescription || "");
+
+    try {
+      setMessage("Uploading photo...");
+      const res = await axios.post(
+        "http://localhost:5000/api/upload-vehicle-photo",
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      if (res.data.status === "success") {
+        setMessage("Photo uploaded successfully!");
+        fetchUserMedia();
+        // Reset form fields
+        setPhotoFile(null);
+        setPhotoPreview("");
+        setPhotoDescription("");
+        setSelectedVehicleId("");
+        setShowAddPhotoForm(false);
+      } else {
+        setMessage(res.data.message || "Failed to upload photo.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      setMessage("An error occurred while uploading.");
     }
   };
 
@@ -238,6 +390,24 @@ function Dashboard() {
       }
       setMessage("Error adding vehicle");
     }
+  };
+
+  const fetchInvoices = () => {
+    axios
+      .get("http://localhost:5000/api/get-user-invoices", {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setInvoices(res.data.invoices);
+        } else {
+          setMessage("Failed to load invoices.");
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setMessage("Error loading invoices.");
+      });
   };
 
   if (loading) {
@@ -387,9 +557,27 @@ function Dashboard() {
           <Link to="/profile" className="dashboard-link">
             View/Edit Profile
           </Link>
-          <Link to="/photos" className="photos-link">
+
+          <button
+            className="invoices-button"
+            onClick={() => {
+              setShowInvoicesModal(true);
+              fetchInvoices();
+            }}
+          >
+            Invoices
+          </button>
+
+          <button
+            className="photos-link"
+            onClick={() => {
+              setShowPhotosModal(true);
+              fetchUserMedia();
+            }}
+          >
             Photos
-          </Link>
+          </button>
+
           <button
             className="add-vehicle-button"
             onClick={() => setShowAddVehicle((prev) => !prev)}
@@ -715,6 +903,224 @@ function Dashboard() {
             </div>
           )}
         </section>
+        <Modal
+          isOpen={showPhotosModal}
+          onRequestClose={() => setShowPhotosModal(false)}
+          style={{
+            overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
+            content: {
+              width: "90%",
+              maxWidth: "800px",
+              margin: "auto",
+              height: "80vh",
+              overflowY: "auto",
+              padding: "20px",
+              borderRadius: "8px",
+            },
+          }}
+        >
+          <button
+            onClick={() => setShowPhotosModal(false)}
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+
+          <h2>Your Vehicle Photos</h2>
+
+          {message && (
+            <div style={{ marginBottom: "10px", color: "#333" }}>{message}</div>
+          )}
+
+          <button
+            style={{ margin: "10px 0", padding: "8px 16px", cursor: "pointer" }}
+            onClick={() => setShowAddPhotoForm((prev) => !prev)}
+          >
+            {showAddPhotoForm ? "Cancel" : "Add Photo"}
+          </button>
+
+          {showAddPhotoForm && (
+            <form onSubmit={handleUploadNewPhoto}>
+              <div style={{ marginBottom: "10px" }}>
+                <label>Select Vehicle:</label>
+                <select
+                  required
+                  value={selectedVehicleId}
+                  onChange={(e) => setSelectedVehicleId(e.target.value)}
+                >
+                  <option value="">--Select Vehicle--</option>
+                  {vehicles.map((v) => (
+                    <option key={v.vehicle_id} value={v.vehicle_id}>
+                      {v.make} {v.model} ({v.year})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Description:</label>
+                <textarea
+                  value={photoDescription}
+                  onChange={(e) => setPhotoDescription(e.target.value)}
+                  placeholder="Enter a description (optional)"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Choose Photo:</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoFileChange}
+                  required
+                />
+              </div>
+
+              {photoPreview && (
+                <img
+                  src={photoPreview}
+                  style={{ width: 150, marginBottom: 10 }}
+                  alt="preview"
+                />
+              )}
+
+              <button type="submit" style={{ padding: "6px 12px" }}>
+                Upload Photo
+              </button>
+            </form>
+          )}
+
+          {vehiclesMedia.map(({ vehicle_info, media }) => (
+            <div key={vehicle_info.vehicle_id} style={{ marginBottom: "20px" }}>
+              <h3>
+                {vehicle_info.make} {vehicle_info.model} ({vehicle_info.year})
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                  gap: "10px",
+                }}
+              >
+                {media.map((photo) => (
+                  <div
+                    key={photo.media_id}
+                    style={{
+                      position: "relative",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <img
+                      src={photo.file_url}
+                      style={{
+                        width: "100%",
+                        height: "100px",
+                        objectFit: "cover",
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "4px",
+                        backgroundColor: "#f9f9f9",
+                      }}
+                    >
+                      <button onClick={() => handleCopyLink(photo.file_url)}>
+                        <Copy size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteMedia(photo.media_id)}>
+                        <Trash2 size={16} color="red" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </Modal>
+        <Modal
+          isOpen={showInvoicesModal}
+          onRequestClose={() => setShowInvoicesModal(false)}
+          style={{
+            overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
+            content: {
+              width: "90%",
+              maxWidth: "800px",
+              margin: "auto",
+              height: "80vh",
+              overflowY: "auto",
+              padding: "20px",
+              borderRadius: "8px",
+            },
+          }}
+        >
+          <button
+            onClick={() => setShowInvoicesModal(false)}
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+
+          <h2>Your Invoices</h2>
+
+          {invoices.length > 0 ? (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr
+                  style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}
+                >
+                  <th>Invoice #</th>
+                  <th>Vehicle</th>
+                  <th>Total Amount</th>
+                  <th>Status</th>
+                  <th>Issue Date</th>
+                  <th>Due Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr
+                    key={inv.invoice_id}
+                    style={{ borderBottom: "1px solid #eee" }}
+                  >
+                    <td>{inv.invoice_number}</td>
+                    <td>
+                      {inv.make
+                        ? `${inv.make} ${inv.model} (${inv.year})`
+                        : "N/A"}
+                    </td>
+                    <td>${inv.total_amount}</td>
+                    <td>{inv.status}</td>
+                    <td>{new Date(inv.issue_date).toLocaleDateString()}</td>
+                    <td>
+                      {inv.due_date
+                        ? new Date(inv.due_date).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p>You have no invoices at the moment.</p>
+          )}
+        </Modal>
       </main>
       <Footer />
     </>
