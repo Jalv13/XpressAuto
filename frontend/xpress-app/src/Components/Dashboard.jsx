@@ -163,7 +163,10 @@ function Dashboard() {
       <Header />
       <main className={`dashboard-container ${theme}`}>
         {/* Overview Section */}
-        <section className="dashboard-overview">
+        <section
+          className="dashboard-overview"
+          style={{ position: "relative", padding: "20px" }}
+        >
           <div className="dashboard-user-photo">
             {user && user.profile_picture_url ? (
               <img
@@ -174,6 +177,7 @@ function Dashboard() {
                   height: "50px",
                   borderRadius: "50%",
                   objectFit: "cover",
+                  border: "2px solid #ccc", // Border around the photo
                 }}
               />
             ) : (
@@ -184,6 +188,36 @@ function Dashboard() {
             )}
           </div>
           <h1 className="welcome-message">Welcome, {getDisplayName()}</h1>
+          {/* Vehicle Status Card with green orb indicator */}
+          <div
+            className="vehicle-status-card"
+            style={{
+              position: "absolute",
+              top: "10px",
+              right: "10px",
+              backgroundColor: "#fff",
+              padding: "8px 12px",
+              borderRadius: "5px",
+              boxShadow: "0 2px 5px rgba(0, 0, 0, 0.6)",
+              fontSize: "0.85rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <div>Vehicle Status: Active </div>
+            <div
+              style={{
+                width: "10px",
+                height: "10px",
+                backgroundColor: "green",
+                borderRadius: "50%",
+                marginLeft: "6px",
+              }}
+            ></div>
+            <div>
+              <div></div>
+            </div>
+          </div>
         </section>
 
         {/* Stats Section */}
