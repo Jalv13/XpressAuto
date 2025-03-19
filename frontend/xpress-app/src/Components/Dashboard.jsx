@@ -177,7 +177,7 @@ function Dashboard() {
                   height: "50px",
                   borderRadius: "50%",
                   objectFit: "cover",
-                  border: "2px solid #ccc", // Border around the photo
+                  border: "2px solid #ccc",
                 }}
               />
             ) : (
@@ -214,9 +214,6 @@ function Dashboard() {
                 marginLeft: "6px",
               }}
             ></div>
-            <div>
-              <div></div>
-            </div>
           </div>
         </section>
 
@@ -268,25 +265,37 @@ function Dashboard() {
           </div>
         </section>
 
-        {/* Dashboard Links */}
-        <section className="dashboard-links">
+        {/* Dashboard Actions */}
+        <section
+          className="dashboard-actions"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "20px",
+            alignItems: "center",
+            marginBottom: "20px",
+          }}
+        >
           <Link to="/profile" className="dashboard-link">
             View/Edit Profile
           </Link>
           <Link to="/photos" className="photos-link">
             Photos
           </Link>
-        </section>
-
-        {/* Add Vehicle Section */}
-        <section className="add-vehicle-section">
           <button
             className="add-vehicle-button"
             onClick={() => setShowAddVehicle((prev) => !prev)}
           >
             {showAddVehicle ? "Cancel" : "Add Vehicle"}
           </button>
-          {showAddVehicle && (
+        </section>
+
+        {/* Add Vehicle Form (conditionally rendered) */}
+        {showAddVehicle && (
+          <section
+            className="add-vehicle-section"
+            style={{ marginBottom: "20px" }}
+          >
             <div className="add-vehicle-container">
               <h3>Add Vehicle</h3>
               <form onSubmit={handleAddVehicleSubmit}>
@@ -397,8 +406,8 @@ function Dashboard() {
                 </button>
               </form>
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* Vehicles Display Section */}
         <section className="vehicles-display">
