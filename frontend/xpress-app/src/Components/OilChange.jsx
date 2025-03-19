@@ -31,7 +31,7 @@ const OilChange = () => {
                     position: 'relative',
                     width: '100%',
                     height: '500px',
-                    backgroundImage: 'url(/images/oilchange1.jpg)',
+                    backgroundImage: 'url(/images/oilchange2.jpg)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     display: 'flex',
@@ -77,7 +77,14 @@ const OilChange = () => {
                             <img 
                                 src="/images/MotorOil.png" 
                                 alt={oil.name} 
-                                style={{ width: "120px", height: "120px" }}
+                                style={{ 
+                                    width: "120px", 
+                                    height: "120px", 
+                                    transition: "transform 0.2s ease-in-out", 
+                                    cursor: "pointer" 
+                                }}
+                                onMouseEnter={(e) => e.target.style.transform = "translateX(-3px) rotate(-2deg)"}
+                                onMouseLeave={(e) => e.target.style.transform = "translateX(3px) rotate(2deg)"}
                             />
                         </div>
                         
@@ -91,38 +98,6 @@ const OilChange = () => {
                     </div>
                 ))}
             </div>
-
-            {/* Book an Appointment Section */}
-            <div style={{
-                backgroundColor: "rgba(255, 204, 0, 0.95)",
-                color: "#fff",
-                textAlign: "center",
-                padding: "30px 20px",
-                marginTop: "40px",
-            }}>
-                <h2 style={{ color: "#000" }}>Schedule Your Oil Change Today</h2>
-                <p style={{ color: "#000" }}>Keep your engine running smoothly with a professional oil change.</p>
-                <button 
-                    style={{
-                        backgroundColor: "#fff", 
-                        color: "#007BFF",
-                        padding: "15px 30px", 
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        borderRadius: "10px", 
-                        border: "none",
-                        cursor: "pointer",
-                        textTransform: "uppercase", 
-                        letterSpacing: "1px", 
-                        transition: "background-color 0.3s ease, transform 0.3s ease", 
-                    }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = "#f2f2f2"}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = "#fff"}
-                >
-                    Book an Appointment
-                </button>
-            </div>
-
         </>
     );
 };

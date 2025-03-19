@@ -82,7 +82,7 @@ const Diagnostic = () => {
                             alignItems: "center",
                         }}>
                            <img 
-                                src="/images/wrench.png" 
+                                src="/images/obd2.png" 
                                 alt={service.name} 
                                 style={{ width: "120px", height: "120px" }}
                             />
