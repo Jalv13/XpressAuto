@@ -605,13 +605,14 @@ body {
 }
 
 /* Dashboard styles */
+
 .dashboard-container {
   max-width: 800px;
   margin: 2rem auto;
   padding: 2rem;
   background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5 10px rgb(0, 0, 0);
 }
 
 .dashboard-content {
@@ -1021,7 +1022,7 @@ small {
   margin: 2rem auto;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.432);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -1119,7 +1120,7 @@ small {
   color: #0056b3;
 }
 
-/* Chart Container */
+/* Dashboard Container TODO: rename, rework reorganize*/
 .dashboard-chart {
   margin-top: 2rem;
   padding: 1rem;
@@ -1271,14 +1272,6 @@ small {
   margin: 0.25rem 0;
 }
 
-.dashboard-user-photo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #000000;
-}
-
 /* Container styling for the photo upload section */
 .profile-photo-section {
   border: 2px dashed #ccc;
@@ -1336,6 +1329,43 @@ input[type="file"] {
 /* Hover effect for the upload button */
 .upload-photo-button:hover {
   background-color: #0056b3;
+}
+
+.dashboard-overview {
+  position: relative; /* Needed for absolute positioning of the status card */
+  display: flex;
+  align-items: center;
+  padding: 20px;
+}
+
+.vehicle-status-card {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #fff;
+  padding: 8px 12px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.vehicle-status-card .status-orb {
+  width: 10px;
+  height: 10px;
+  background-color: green;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.dashboard-user-photo img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 5px;
+  object-fit: cover;
+  border: 1px solid #000000;
 }
 
 /* Responsive Adjustments */
