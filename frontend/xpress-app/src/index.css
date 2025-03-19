@@ -1158,6 +1158,12 @@ small {
   background-color: #e9ecef;
 }
 
+/* Notifications Section - Scrollable Pane */
+.notifications {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 600px) {
   .dashboard-stats {
