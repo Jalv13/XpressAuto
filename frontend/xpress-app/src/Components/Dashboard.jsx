@@ -420,8 +420,179 @@ function Dashboard() {
     );
   }
 
+  const dashboardStyles = `
+  /* User dash and profile section */
+  .user-greeting {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    border-bottom: 1px solid #eaeaea;
+  }
+  
+  .user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #333;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .user-name {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  /* Main dashboard content area */
+  .dashboard-content {
+    margin-top: 30px;
+    padding: 20px 0;
+  }
+  
+  /* Arrange buttons in a horizontal line */
+  .dashboard-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap; 
+    justify-content: space-between;
+    gap: 10px; /* Spacing between buttons */
+    margin: 40px 0 30px;
+    width: 100%; /* Full width */
+    padding: 0;
+  }
+  
+  /* Standardized Button Styling */
+  .dashboard-actions button,
+  .dashboard-actions .dashboard-link,
+  .dashboard-actions a {
+    flex: 1; 
+    min-width: 160px;
+    height: 50px;
+    font-size: 0.9rem; 
+    font-weight: 600;
+    border: none;
+    border-radius: 4px; 
+    background-color: rgba(255, 204, 0, 0.95);
+    color: #333;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    padding: 0 15px;
+    margin: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative; /* For hover line */
+    overflow: hidden; /* For hover line */
+  }
+  
+  
+  .dashboard-actions button::after,
+  .dashboard-actions .dashboard-link::after,
+  .dashboard-actions a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background-color: #333;
+    transition: width 0.3s ease;
+  }
+  
+  .dashboard-actions button:hover::after,
+  .dashboard-actions .dashboard-link:hover::after,
+  .dashboard-actions a:hover::after {
+    width: 100%;
+  }
+  
+  /* Hover animation effect */
+  .dashboard-actions button:hover,
+  .dashboard-actions .dashboard-link:hover,
+  .dashboard-actions a:hover {
+    background-color: #ffd700;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Active/click animation effect */
+  .dashboard-actions button:active,
+  .dashboard-actions .dashboard-link:active,
+  .dashboard-actions a:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    background-color: #f0c000;
+  }
+  
+  /* Vehicles section */
+  .vehicles-section {
+    margin-top: 30px;
+  }
+  
+  .vehicles-section h2 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+  }
+  
+  .vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  
+  .vehicle-card {
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  .vehicle-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+  }
+  
+  /* Mobile responsiveness */
+  @media (max-width: 768px) {
+    .dashboard-actions {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .dashboard-actions button,
+    .dashboard-actions .dashboard-link,
+    .dashboard-actions a {
+      width: 100%;
+      max-width: 280px;
+    }
+    
+    .vehicle-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+`;
   return (
     <>
+
+      <style>{dashboardStyles}</style>
+
       <Header />
       <main className={`dashboard-container ${theme}`}>
         {/* Overview Section */}
