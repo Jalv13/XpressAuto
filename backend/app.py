@@ -1023,8 +1023,53 @@ def get_loyalty_points():
 
 
 # Add points
+# @app.route("/api/add-loyalty-points", methods=["POST"])
+# @login_required
+# def add_loyalty_points():
+#     data = request.get_json()
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+
+#     try:
+#         cursor.execute(
+#             """
+#             INSERT INTO loyalty_points (user_id, points_balance, total_points_earned, last_updated)
+#             VALUES (%s, %s, %s, NOW())
+#             ON CONFLICT (user_id)
+#             DO UPDATE SET
+#                 points_balance = loyalty_points.points_balance + EXCLUDED.points_balance,
+#                 total_points_earned = loyalty_points.total_points_earned + EXCLUDED.total_points_earned,
+#                 last_updated = NOW()
+#             RETURNING points_balance
+#             """,
+#             (current_user.id, data["points"], data["points"]),
+#         )
+#         updated_points = cursor.fetchone()
+#         if not updated_points:
+#             return jsonify({"status": "error", "message": "Failed to add points"}), 500
+
+#         conn.commit()
+#         return (
+#             jsonify(
+#                 {
+#                     "status": "success",
+#                     "message": "Points added!",
+#                     "points_balance": updated_points["points_balance"],
+#                 }
+#             ),
+#             200,
+#         )
+
+#     except Exception as e:
+#         conn.rollback()
+#         return jsonify({"status": "error", "message": str(e)}), 500
+#     finally:
+#         cursor.close()
+#         conn.close()
+
+
+##DEMO METHOD
 @app.route("/api/add-loyalty-points", methods=["POST"])
-@login_required
 def add_loyalty_points():
     data = request.get_json()
     conn = get_db_connection()
@@ -1042,7 +1087,7 @@ def add_loyalty_points():
                 last_updated = NOW()
             RETURNING points_balance
             """,
-            (current_user.id, data["points"], data["points"]),
+            (data["user_id"], data["points"], data["points"]),
         )
         updated_points = cursor.fetchone()
         if not updated_points:
@@ -1054,7 +1099,7 @@ def add_loyalty_points():
                 {
                     "status": "success",
                     "message": "Points added!",
-                    "points_balance": updated_points["points_balance"],
+                    "points_balance": updated_points[0],  # Fetch by index
                 }
             ),
             200,
