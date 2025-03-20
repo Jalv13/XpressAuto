@@ -1,4 +1,4 @@
-//Authors: Joshua, , , , ,
+//Authors: Joshua, Joe, , , ,
 
 
 import Header from "./Header";

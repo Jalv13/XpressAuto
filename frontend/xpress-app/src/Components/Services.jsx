@@ -1,4 +1,4 @@
-//Authors: Joshua, , , , ,
+//Authors: Joshua, Joe, , , ,
 
 function Services() {
   return (
