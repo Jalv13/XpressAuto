@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "./contexts/AuthContext";
 import { authService } from "../Services/authService";
 import Header from "./Header";
 import Footer from "./Footer";
 
 function Profile() {
-  const { user } = useAuth();
   const [profile, setProfile] = useState({
     username: "",
     name: "",
@@ -13,12 +11,10 @@ function Profile() {
     address: "",
     profile_picture_url: "",
   });
-
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
-
   // New state for profile photo file and preview
   const [profilePhotoFile, setProfilePhotoFile] = useState(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
@@ -30,19 +26,26 @@ function Profile() {
     confirmPassword: "",
   });
 
-  // Fetch profile on component mount
+  // Fetch profile on component mount (always fetch demo data regardless of auth)
   useEffect(() => {
     const fetchProfile = async () => {
-      if (user) {
-        const result = await authService.getProfile();
-        if (result.success) {
-          setProfile(result.data);
-        }
-        setLoading(false);
+      const result = await authService.getProfile();
+      if (result.success) {
+        setProfile(result.data);
+      } else {
+        // If fetching fails, set demo data for editing with a demo photo
+        setProfile({
+          username: "demo@example.com",
+          name: "Demo User",
+          phone: "",
+          address: "",
+          profile_picture_url: "/images/profilepic.jpeg",
+        });
       }
+      setLoading(false);
     };
     fetchProfile();
-  }, [user]);
+  }, []);
 
   // Handle profile form input changes
   const handleProfileChange = (e) => {
@@ -62,7 +65,7 @@ function Profile() {
     }));
   };
 
-  // New: Handle file input change for profile photo
+  // Handle file input change for profile photo
   const handleProfilePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -71,58 +74,26 @@ function Profile() {
     }
   };
 
-  // New: Upload profile photo to backend (which uploads to S3 and updates DB)
+  // Upload profile photo (for demo purposes, simulate a successful upload)
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile) return;
-    const formData = new FormData();
-    formData.append("file", profilePhotoFile);
-    const result = await authService.uploadProfilePhoto(formData);
-    if (result.success) {
-      setProfile((prev) => ({
-        ...prev,
-        profile_picture_url: result.profile_picture_url,
-      }));
-      setMessage("Profile photo updated successfully");
-    } else {
-      setMessage(result.error || "Profile photo upload failed");
-    }
+    setProfile((prev) => ({
+      ...prev,
+      profile_picture_url: profilePhotoPreview,
+    }));
+    setMessage("Profile photo updated successfully");
   };
 
   // Handle profile form submission
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-
-    // Extract first and last name more reliably
-    let first_name = "", last_name = "";
-    const nameParts = profile.name.trim().split(" ");
-    if (nameParts.length > 0) {
-      first_name = nameParts[0];
-      if (nameParts.length > 1) {
-        last_name = nameParts.slice(1).join(" ");
-      }
-    }
-
-    const payload = {
-      first_name,
-      last_name,
-      phone: profile.phone || "",
-      address: profile.address || "",
-    };
-
-    console.log("Submitting profile update:", payload);
-    const result = await authService.updateProfile(payload);
-    if (result.success) {
-      setIsSuccess(true);
-      setMessage("Profile updated successfully");
-    } else {
-      setIsSuccess(false);
-      setMessage(result.error || "Failed to update profile");
-      console.error("Profile update failed:", result.error);
-    }
+    // Simulate processing for demo purposes
+    setIsSuccess(true);
+    setMessage("Profile updated successfully (demo)");
   };
 
-  // Handle password change form submission
+  // Handle password change form submission (demo only)
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -136,22 +107,13 @@ function Profile() {
       setMessage("New password must be at least 6 characters long");
       return;
     }
-    const result = await authService.changePassword(
-      passwordData.currentPassword,
-      passwordData.newPassword
-    );
-    if (result.success) {
-      setIsSuccess(true);
-      setMessage("Password changed successfully");
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-    } else {
-      setIsSuccess(false);
-      setMessage(result.error || "Failed to change password");
-    }
+    setIsSuccess(true);
+    setMessage("Password changed successfully (demo)");
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
   };
 
   if (loading) {
@@ -162,7 +124,7 @@ function Profile() {
     <>
       <Header />
       <div className="profile-container">
-        <h1>My Profile</h1>
+        <h1>My Profile (Demo)</h1>
         <div className="profile-tabs">
           <button
             className={`tab-button ${activeTab === "details" ? "active" : ""}`}
@@ -231,7 +193,7 @@ function Profile() {
                   rows="3"
                 ></textarea>
               </div>
-              {/* New: Profile photo upload */}
+              {/* Profile photo upload section */}
               <div className="form-group profile-photo-section">
                 <label htmlFor="profilePhoto">Profile Photo</label>
                 <div className="profile-photo-preview">
@@ -239,8 +201,7 @@ function Profile() {
                     src={
                       profilePhotoPreview ||
                       profile.profile_picture_url ||
-                      user?.profile_picture_url ||
-                      "/default-profile.png"
+                      "/images/profilepic.jpeg"
                     }
                     alt="Profile"
                     style={{
