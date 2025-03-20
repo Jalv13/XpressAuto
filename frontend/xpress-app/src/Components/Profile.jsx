@@ -39,7 +39,7 @@ function Profile() {
           name: "Demo User",
           phone: "",
           address: "",
-          profile_picture_url: "/images/profilepic.jpeg",
+          profile_picture_url: "/images/profilepic.jpg",
         });
       }
       setLoading(false);
