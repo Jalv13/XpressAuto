@@ -373,7 +373,10 @@ def delete_user(user_id):
 # VEHICLES
 
 
-# # Add a vehicle
+# Add a vehicle
+# Update this function in your Flask application to include vehicle_image_url
+
+
 @app.route("/api/add-vehicle", methods=["POST"])
 @login_required
 def add_vehicle():
@@ -382,23 +385,58 @@ def add_vehicle():
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            "INSERT INTO vehicles (user_id, make, model, year, vin, license_plate, color, mileage, engine_type, transmission, is_primary) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING vehicle_id",
-            (
-                current_user.id,
-                data["make"],
-                data["model"],
-                data["year"],
-                data.get("vin"),
-                data.get("license_plate"),
-                data.get("color"),
-                data.get("mileage"),
-                data.get("engine_type"),
-                data.get("transmission"),
-                data.get("is_primary", False),
-            ),
-        )
+        # Check if we need to include vehicle_image_url in the query
+        if data.get("vehicle_image_url"):
+            cursor.execute(
+                """
+                INSERT INTO vehicles (
+                    user_id, make, model, year, vin, license_plate, 
+                    color, mileage, engine_type, transmission, 
+                    is_primary, vehicle_image_url
+                ) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                RETURNING vehicle_id
+                """,
+                (
+                    current_user.id,
+                    data["make"],
+                    data["model"],
+                    data["year"],
+                    data.get("vin"),
+                    data.get("license_plate"),
+                    data.get("color"),
+                    data.get("mileage"),
+                    data.get("engine_type"),
+                    data.get("transmission"),
+                    data.get("is_primary", False),
+                    data.get("vehicle_image_url"),
+                ),
+            )
+        else:
+            # Original query without vehicle_image_url
+            cursor.execute(
+                """
+                INSERT INTO vehicles (
+                    user_id, make, model, year, vin, license_plate, 
+                    color, mileage, engine_type, transmission, is_primary
+                ) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                RETURNING vehicle_id
+                """,
+                (
+                    current_user.id,
+                    data["make"],
+                    data["model"],
+                    data["year"],
+                    data.get("vin"),
+                    data.get("license_plate"),
+                    data.get("color"),
+                    data.get("mileage"),
+                    data.get("engine_type"),
+                    data.get("transmission"),
+                    data.get("is_primary", False),
+                ),
+            )
 
         new_vehicle_id = cursor.fetchone()["vehicle_id"]
         conn.commit()
@@ -480,6 +518,151 @@ def update_vehicle(vehicle_id):
     finally:
         cursor.close()
         conn.close()
+
+
+# Vehicle Photo:
+@app.route("/api/upload-vehicle-photo", methods=["POST"])
+@login_required
+def upload_vehicle_photo():
+    """Handles upload of vehicle photos to S3 and updates vehicle records"""
+    # Check if file is present in request
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    vehicle_id = request.form.get("vehicle_id")
+
+    # Validate file
+    if file.filename == "":
+        return jsonify({"status": "error", "message": "No file selected"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"status": "error", "message": "File type not allowed"}), 400
+
+    # Create unique filename
+    filename = f"vehicle_{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+
+    # Properly detect content type based on file extension
+    content_type = mimetypes.guess_type(filename)[0] or "image/jpeg"
+
+    # Debug logging
+    print(f"Uploading file: {filename}, Content-Type: {content_type}")
+
+    try:
+        # Upload to S3
+        s3_client.upload_fileobj(
+            file,
+            S3_BUCKET_NAME,
+            filename,
+            ExtraArgs={
+                "CacheControl": "max-age=86400",  # Cache for 1 day
+                "ContentType": content_type,
+                "ACL": "public-read",  # Make it publicly accessible
+            },
+        )
+
+        # Construct the URL to the uploaded file
+        file_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+
+        # Debug logging
+        print(f"File uploaded successfully. URL: {file_url}")
+
+        # If vehicle_id is provided, update the existing vehicle
+        if vehicle_id and vehicle_id.isdigit():
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            try:
+                # Update the vehicle record with the new image URL
+                cursor.execute(
+                    "UPDATE vehicles SET vehicle_image_url = %s WHERE vehicle_id = %s AND user_id = %s RETURNING vehicle_id",
+                    (file_url, vehicle_id, current_user.id),
+                )
+
+                updated = cursor.fetchone()
+                if not updated:
+                    # If no rows were updated, either the vehicle doesn't exist or doesn't belong to this user
+                    return (
+                        jsonify(
+                            {
+                                "status": "error",
+                                "message": "Vehicle not found or you don't have permission to update it",
+                            }
+                        ),
+                        404,
+                    )
+
+                conn.commit()
+            except Exception as db_error:
+                conn.rollback()
+                print(f"Database error: {str(db_error)}")
+                raise db_error  # Re-raise to be caught by the outer try/except
+            finally:
+                cursor.close()
+                conn.close()
+
+        # Return success response with the URL
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Vehicle photo uploaded successfully",
+                    "vehicle_image_url": file_url,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Error uploading vehicle photo: {str(e)}")
+        return (
+            jsonify({"status": "error", "message": f"Error uploading file: {str(e)}"}),
+            500,
+        )
+
+
+# Get vehicle image
+
+
+@app.route("/api/get-vehicle-image/<int:vehicle_id>", methods=["GET"])
+@login_required
+def get_vehicle_image(vehicle_id):
+    """Retrieves the image URL for a specific vehicle"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Only return the image URL for vehicles belonging to the current user
+        cursor.execute(
+            "SELECT vehicle_image_url FROM vehicles WHERE vehicle_id = %s AND user_id = %s",
+            (vehicle_id, current_user.id),
+        )
+
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not result:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Vehicle not found or not authorized",
+                    }
+                ),
+                404,
+            )
+
+        # Return the image URL (could be null)
+        return (
+            jsonify(
+                {"status": "success", "vehicle_image_url": result["vehicle_image_url"]}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # REVIEWS

@@ -34,7 +34,6 @@ CREATE TABLE users (
     last_login TIMESTAMP
 );
 
-# Create Vehicles Table
 CREATE TABLE vehicles (
     vehicle_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
@@ -48,7 +47,9 @@ CREATE TABLE vehicles (
     engine_type VARCHAR(50),
     transmission VARCHAR(30),
     date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_primary BOOLEAN DEFAULT FALSE
+    vehicle_status VARCHAR(10) DEFAULT 'OffLot' 
+      CHECK (vehicle_status IN ('Waiting', 'Active', 'OffLot')),
+    vehicle_image_url VARCHAR(255)
 );
 
 # Create Service Categories Table
