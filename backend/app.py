@@ -32,9 +32,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "webp"}
-
-
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -376,6 +373,11 @@ def delete_user(user_id):
 # VEHICLES
 
 
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 @app.route("/api/add-vehicle", methods=["POST"])
 @login_required
 def add_vehicle():
@@ -554,6 +556,9 @@ def update_vehicle(vehicle_id):
     finally:
         cursor.close()
         conn.close()
+
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "webp"}
 
 
 # Vehicle Photo:
