@@ -1,4 +1,5 @@
-import Header from "./Header";
+//Authors: Joe, , , , ,
+
 import Footer from "./Footer";
 
 const brakeServices = [
