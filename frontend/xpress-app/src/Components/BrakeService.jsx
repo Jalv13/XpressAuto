@@ -1,5 +1,6 @@
 //Authors: Joe, , , , ,
 
+import Header from "./Header";
 import Footer from "./Footer";
 
 const brakeServices = [
@@ -24,6 +25,7 @@ const brakeServices = [
 const BrakeService = () => {
     return (
         <>
+        <title>Brake Services</title>
             <Header />
 
             {/* Hero Section */}

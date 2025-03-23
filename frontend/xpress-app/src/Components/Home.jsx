@@ -11,6 +11,7 @@ import Reviews from "./Reviews";
 function Home() {
   return (
     <>
+      <title>Home</title>
       <Header />
       <Hero />
       <Services />

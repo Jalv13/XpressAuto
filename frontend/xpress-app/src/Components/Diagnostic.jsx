@@ -29,6 +29,7 @@ const diagnosticServices = [
 const Diagnostic = () => {
     return (
         <>
+        <title>Vehicle Diagnostics</title>
             <Header />
             
             {/* Hero Section */}

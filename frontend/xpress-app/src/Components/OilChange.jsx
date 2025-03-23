@@ -1,4 +1,4 @@
-//Authors: Joe, , , , ,
+//Authors: Joe, Michael, , , ,
 
 import Header from "./Header";
 
@@ -24,6 +24,7 @@ const oilTypes = [
 const OilChange = () => {
     return (
         <>
+        <title>Oil Change Services</title>
             <Header />
             
             {/* Hero Section */}
@@ -86,7 +87,7 @@ const OilChange = () => {
                                     cursor: "pointer" 
                                 }}
                                 onMouseEnter={(e) => e.target.style.transform = "translateX(-3px) rotate(-2deg)"}
-                                onMouseLeave={(e) => e.target.style.transform = "translateX(3px) rotate(2deg)"}
+                                onMouseLeave={(e) => e.target.style.transform = "translateX(3px) rotate(0deg)"}
                             />
                         </div>
                         

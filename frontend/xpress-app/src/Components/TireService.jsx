@@ -24,6 +24,7 @@ const tireServices = [
 const TireService = () => {
     return (
         <>
+        <title>Tire Services</title>
             <Header />
             
             {/* Hero Section */}

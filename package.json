@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "react-content-loader": "^7.0.2"
+    "lucide-react": "^0.483.0",
+    "react-content-loader": "^7.0.2",
+    "react-modal": "^3.16.3"
   }
 }

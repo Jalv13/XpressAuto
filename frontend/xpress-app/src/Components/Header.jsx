@@ -1,10 +1,11 @@
-//Authors: Joshua, Joe, , , ,
+//Authors: Joshua, Joe, Michael, , ,
 
 
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { FaHome } from "react-icons/fa";
 
 function Header() {
   const { user, logout } = useAuth();
@@ -62,7 +63,7 @@ function Header() {
   };
 
    // Updated function to handle opening maps with your specific address
-   const handleOpenMaps = () => {
+  const handleOpenMaps = () => {
     // Business address and coordinates
     const address = "2425 Atlantic Ave, Atlantic City, NJ 08401";
     const latitude = 39.3571342;
@@ -94,7 +95,7 @@ function Header() {
         </Link>
       </div>
       
-     
+      
       
       <nav className={mobileMenuOpen ? "nav-active" : ""}>
         <ul>
@@ -159,10 +160,13 @@ function Header() {
       <div className="header-actions">
         <button className="icon-button" aria-label="Search">
           <i className="fa-solid fa-search"></i>
+          
         </button>
-        <button className="icon-button" aria-label="Contact">
-          <i className="fa-solid fa-phone"></i>
-        </button>
+        <Link to="/contactus">
+          <button className="icon-button" aria-label="Contact Us">
+            <i className="fa-solid fa-phone"></i>
+          </button>
+        </Link>
         <button 
           className="icon-button" 
           aria-label="Get Directions"

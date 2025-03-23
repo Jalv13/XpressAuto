@@ -61,6 +61,7 @@ function Register() {
 
   return (
     <>
+      <title>Register</title>
       <Header />
       <div className="login-page">
         <div className="login-container">
