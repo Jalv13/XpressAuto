@@ -24,6 +24,7 @@ const brakeServices = [
 const BrakeService = () => {
     return (
         <>
+        <title>Brake Services</title>
             <Header />
 
             {/* Hero Section */}

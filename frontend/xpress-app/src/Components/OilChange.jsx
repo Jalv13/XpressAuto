@@ -1,4 +1,4 @@
-//Authors: Joe, , , , ,
+//Authors: Joe, Michael, , , ,
 
 import Header from "./Header";
 
@@ -24,6 +24,7 @@ const oilTypes = [
 const OilChange = () => {
     return (
         <>
+        <title>Oil Change Services</title>
             <Header />
             
             {/* Hero Section */}

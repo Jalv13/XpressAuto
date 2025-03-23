@@ -37,6 +37,7 @@ function Login() {
 
   return (
     <>
+      <title>Login</title>
       <Header />
       <div className="login-page">
         <div className="login-container">

@@ -5,6 +5,7 @@ import Footer from "./Footer";
 function AboutUs() {
    return (
        <>
+              <title>About Us</title>
            <Header />
 
 

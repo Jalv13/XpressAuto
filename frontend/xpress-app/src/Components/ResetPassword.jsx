@@ -53,6 +53,7 @@ function ResetPassword() {
 
   return (
     <>
+      <title>Reset Password</title>
       <Header />
       <div className="login-page">
         <div className="login-container">

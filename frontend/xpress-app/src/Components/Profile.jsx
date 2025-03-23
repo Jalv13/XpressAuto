@@ -160,6 +160,7 @@ function Profile() {
 
   return (
     <>
+      <title>Profile</title>
       <Header />
       <div className="profile-container">
         <h1>My Profile</h1>
