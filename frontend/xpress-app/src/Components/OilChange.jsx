@@ -87,7 +87,7 @@ const OilChange = () => {
                                     cursor: "pointer" 
                                 }}
                                 onMouseEnter={(e) => e.target.style.transform = "translateX(-3px) rotate(-2deg)"}
-                                onMouseLeave={(e) => e.target.style.transform = "translateX(3px) rotate(2deg)"}
+                                onMouseLeave={(e) => e.target.style.transform = "translateX(3px) rotate(0deg)"}
                             />
                         </div>
                         
