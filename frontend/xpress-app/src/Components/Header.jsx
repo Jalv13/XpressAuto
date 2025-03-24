@@ -6,6 +6,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaHome } from "react-icons/fa";
+import { FaPhone } from "react-icons/fa";
+
 
 function Header() {
   const { user, logout } = useAuth();
@@ -15,6 +17,7 @@ function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false); // New state for profile dropdown
+  
 
   // Handle scroll effects
   useEffect(() => {
@@ -163,9 +166,9 @@ function Header() {
           
         </button>
         <Link to="/contactus">
-          <button className="icon-button" aria-label="Contact Us">
-            <i className="fa-solid fa-phone"></i>
-          </button>
+        <button className="icon-button" aria-label="Contact Us">
+          <FaPhone />
+        </button>
         </Link>
         <button 
           className="icon-button" 
