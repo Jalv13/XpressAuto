@@ -1,4 +1,4 @@
-//Authors: Joe, Michael, , ,
+//Authors: Michael, Joe, , ,
 
 import Header from "./Header";
 import Footer from "./Footer";
@@ -42,17 +42,24 @@ const contactInfo = [
     },
     {
         name: "Email",
-        description: "",
+        description: ( // This allows the email to be clickable and open the user's email client.
+            <>
+                You can email us at:{" "}
+                <a href="mailto:xpress2425@gmail.com" target="_blank" rel="noopener noreferrer">
+                    xpress2425@gmail.com
+                </a>. We will get back to you as soon as possible.
+            </>
+        ),
         image : "/images/email.png"
     },
     {
         name: "Mailing Address",
-        description: "Please mail us at this address: 2425 Atlantic Ave, Atlantic City, NJ 08401",
+        description: "Please mail to us at this address: 2425 Atlantic Ave, Atlantic City, NJ 08401",
         image : "/images/email.png"
     },
     {
         name: "Social Media Platforms",
-        description: "Follow us on our social media platforms for updates and promotions.",
+        description: "Check back soon and follow us on our social media platforms for updates and promotions.",
         image : "/images/socialMedia.png"
     },
     {
@@ -74,8 +81,8 @@ const ContactUs = () => {
                 className="hero"
                 style={{
                     position: 'relative',
-                    width: '100%',
-                    height: '300px',
+                    width: '94%',
+                    height: '280px',
                     backgroundImage: 'url(/images/contactus.png)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -126,7 +133,7 @@ const ContactUs = () => {
                                     width: "120px", 
                                     height: "120px", 
                                     transition: "transform 0.2s ease-in-out", 
-                                    cursor: "pointer" 
+                                    cursor: "default",
                                 }}
                                 onMouseEnter={(e) => e.target.style.transform = "translateX(-3px) rotate(-2deg)"}
                                 onMouseLeave={(e) => e.target.style.transform = "translateX(0) rotate(0deg)"}
