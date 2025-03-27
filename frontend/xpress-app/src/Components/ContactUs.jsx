@@ -42,8 +42,8 @@ const contactInfo = [
     },
     {
         name: "Email",
-        description: "",
-        image : "/images/email.png"
+        description: "Click here to email",
+        image : "/images/email.png",
     },
     {
         name: "Mailing Address",

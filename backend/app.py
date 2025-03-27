@@ -8,6 +8,7 @@ It handles user authentication, registration, and profile management operations.
 # Authors: Joshua, Rich, , , , ,
 
 from flask import Flask, jsonify, request, session
+from flask_mail import Mail,Message
 from flask_cors import CORS
 from flask_login import (
     LoginManager,
@@ -1376,6 +1377,51 @@ def upload_profile_photo():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+    
+@app.route('/api/contact', methods=['POST'])
+def contact():
+    app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USE_SSL'] = False
+    mail = Mail(app)
+    try:
+        # Get form data from request
+        data = request.json
+        name = data.get('name', '')
+        email = data.get('email', '')
+        message_body = data.get('message', '')
+        
+        # Create email subject with sender's name
+        subject = f"Contact Form Submission from {name}"
+        
+        # Create email message
+        msg = Message(
+            subject=subject,
+            sender=app.config['MAIL_USERNAME'],
+            recipients=['sjndwsgptyiutcioli@nbmbb.com'] #replace with env with client's email on deployment or demo user
+        )
+        
+        # Format email body with sender's information
+        msg.body = f"""
+        Name: {name}
+        Email: {email}
+        
+        Message:
+        {message_body}
+        """
+        
+        # Send email
+        mail.send(msg)
+        
+        return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
+    
+    except Exception as e:
+        # Log the error (in a production environment, use a proper logging system)
+        print(f"Error sending email: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # APPLICATION ENTRY POINT
