@@ -37,6 +37,7 @@ function App() {
           <Route path="/services/oil-change" element={<OilChange />} />
           <Route path="/appointment" element={<Appointment />} />
           <Route path="/contactus" element={<ContactUs />} />
+          <Route path="/contactform" element={<ContactForm />} />
         </Routes>
       </Router>
     </AuthProvider>
