@@ -16,6 +16,7 @@ import Diagnostic from "./Components/Diagnostic.jsx";
 import BrakeService from "./Components/BrakeService.jsx";
 import Appointment from "./Components/Appointment.jsx";
 import ContactUs from "./Components/ContactUs.jsx";
+import ContactForm from "./Components/ContactForm.jsx";
 
 function App() {
   return (

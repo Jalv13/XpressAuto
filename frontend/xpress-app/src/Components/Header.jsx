@@ -110,6 +110,11 @@ function Header() {
               About Us
             </Link>
           </li>
+          <li>
+            <Link to="/contactform" className={isActive("/contactform") ? "active-link" : ""}>
+              Contact Us
+            </Link>
+          </li>
           <li className="dropdown">
             <a 
               href="#" 

@@ -1401,7 +1401,7 @@ def contact():
         msg = Message(
             subject=subject,
             sender=app.config['MAIL_USERNAME'],
-            recipients=['strawberrygelatos@gmail.com']  # Replace with actual recipient's email or env variable
+            recipients=['sjndwsgptyiutcioli@nbmbb.com'] #replace with env with client's email on deployment or demo user
         )
         
         # Format email body with sender's information
