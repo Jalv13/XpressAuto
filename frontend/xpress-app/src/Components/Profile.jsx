@@ -93,7 +93,7 @@ function Profile() {
     e.preventDefault();
     setMessage("");
 
-    // Extract first and last name more reliably
+    // Extract first and last name
     let first_name = "", last_name = "";
     const nameParts = profile.name.trim().split(" ");
     if (nameParts.length > 0) {
