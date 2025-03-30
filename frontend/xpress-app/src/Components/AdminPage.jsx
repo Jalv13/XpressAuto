@@ -9,18 +9,23 @@ import { X } from "lucide-react";
 const adminStyles = `
   /* Container and header */
   .admin-container {
+  diplay: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
     padding: 20px;
-    font-family: sans-serif;
-    color: #333;
-  }
+margin: 0;
+background-color - white;
+}
     .admin-box {
-      width: 90%; 
+      width: 100%; 
       max-width: 1000px;
       background-color: #white;
       padding: 30px;
-      border-radius: 8px;
+      border-radius: 16px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       border: 1px solid #eee;
+      margin: auto;
   
   .admin-overview {
     margin-bottom: 30px;
