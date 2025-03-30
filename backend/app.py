@@ -18,6 +18,8 @@ from flask_login import (
     login_required,
     current_user,
 )
+from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename  #
 import os
@@ -1401,7 +1403,7 @@ def contact():
         msg = Message(
             subject=subject,
             sender=app.config['MAIL_USERNAME'],
-            recipients=['sjndwsgptyiutcioli@nbmbb.com'] #replace with env with client's email on deployment or demo user
+            recipients=['coulte12@go.stockton.edu'] #replace with env with client's email on deployment or demo user
         )
         
         # Format email body with sender's information
@@ -1423,6 +1425,55 @@ def contact():
         print(f"Error sending email: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/send-sms', methods=['POST'])
+def send_sms():
+    TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+    TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+    TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+
+    # Get JSON data from request
+    data = request.get_json()
+    
+    # Validate required fields
+    if not all(k in data for k in ('to', 'message')):
+        return jsonify({
+            'success': False,
+            'error': 'Missing required fields: "to" and "message" are required'
+        }), 400
+    
+    # Extract data
+    to_number = data['to']
+    message_body = data['message']
+    
+    # Initialize Twilio client
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        
+        # Send message
+        message = client.messages.create(
+            body=message_body,
+            from_=TWILIO_PHONE_NUMBER,
+            to=to_number
+        )
+        
+        # Return success response with message SID
+        return jsonify({
+            'success': True,
+            'message_sid': message.sid
+        }), 200
+        
+    except TwilioRestException as e:
+        # Handle Twilio-specific errors
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+    except Exception as e:
+        # Handle any other exceptions
+        return jsonify({
+            'success': False,
+            'error': f'An unexpected error occurred: {str(e)}'
+        }), 500
 
 # APPLICATION ENTRY POINT
 
