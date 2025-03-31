@@ -28,7 +28,6 @@ function ContactForm() {
     setStatus(prevState => ({ ...prevState, submitting: true }));
     
     try {
-      // Make a POST request to your Flask API endpoint
       await axios.post('http://127.0.0.1:5000/api/contact', formData);
       
       setStatus({
@@ -37,7 +36,6 @@ function ContactForm() {
         info: { error: false, msg: 'Message sent successfully!' }
       });
       
-      // Reset form after successful submission
       setFormData({
         name: '',
         email: '',
@@ -56,66 +54,69 @@ function ContactForm() {
 
   return (
     <div className="contact-form-container">
-      <Header/>
-      <h2>Contact Us</h2>
-      
-      {status.info.error && (
-        <div className="error-message">
-          <p>{status.info.msg}</p>
-        </div>
-      )}
-      
-      {status.submitted && !status.info.error && (
-        <div className="success-message">
-          <p>{status.info.msg}</p>
-        </div>
-      )}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
-        </div>
+      <Header />
+      <div className="form-wrapper">
+        <h2>Contact Us</h2>
         
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {status.info.error && (
+          <div className="error-message">
+            <p>{status.info.msg}</p>
+          </div>
+        )}
         
-        <div className="form-group">
-          <label htmlFor="message">Message</label>
-          <textarea
-            id="message"
-            name="message"
-            value={formData.message}
-            onChange={handleChange}
-            rows="5"
-            required
-          />
-        </div>
+        {status.submitted && !status.info.error && (
+          <div className="success-message">
+            <p>{status.info.msg}</p>
+          </div>
+        )}
         
-        <button 
-          type="submit" 
-          disabled={status.submitting}
-        >
-          {status.submitting ? 'Sending...' : 'Send Message'}
-        </button>
-      </form>
-      <Footer/>
+        <form onSubmit={handleSubmit} className="contact-form">
+          <div className="form-group">
+            <label htmlFor="name">Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="message">Message</label>
+            <textarea
+              id="message"
+              name="message"
+              value={formData.message}
+              onChange={handleChange}
+              rows="5"
+              required
+            />
+          </div>
+          
+          <button 
+            type="submit" 
+            disabled={status.submitting} 
+            className="submit-button"
+          >
+            {status.submitting ? 'Sending...' : 'Send Message'}
+          </button>
+        </form>
+      </div>
+      <Footer />
     </div>
   );
 }
