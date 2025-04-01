@@ -42,12 +42,13 @@ const contactInfo = [
     },
     {
         name: "Email",
-        description: "Click here to email",
-        image : "/images/email.png",
+        description: "Email us at: xpress2425@gmail.com",
+        emailLink: "xpress2425@gmail.com",
+        image : "/images/email.png"
     },
     {
         name: "Mailing Address",
-        description: "Please mail us at this address: 2425 Atlantic Ave, Atlantic City, NJ 08401",
+        description: "Mail us at this address: 2425 Atlantic Ave, Atlantic City, NJ 08401",
         image : "/images/email.png"
     },
     {
@@ -109,7 +110,9 @@ const ContactUs = () => {
                             borderLeft: "6px solid rgba(255, 204, 0, 0.95)",
                             gap: "20px",
                         }}
+                        
                     >
+                        
                         {/* Image with Background */}
                         <div style={{
                             backgroundColor: "#f5f5f5",
@@ -144,6 +147,11 @@ const ContactUs = () => {
                                         </div>
                                     ))}
                                 </div>
+                            ) : info.emailLink ? (
+                                <p style={{ color: "#555", fontSize: "15px", lineHeight: "1.8", maxWidth: "600px" }}>
+                                    {info.description.split(info.emailLink)[0]}
+                                    <a href={`mailto:${info.emailLink}`}>{info.emailLink}</a>
+                                </p>
                             ) : (
                                 <p style={{ color: "#555", fontSize: "15px", lineHeight: "1.8", maxWidth: "600px" }}>
                                     {info.description}
