@@ -32,28 +32,76 @@ const Diagnostic = () => {
         <title>Vehicle Diagnostics</title>
             <Header />
             
-            {/* Hero Section */}
-            <div 
-                className="hero"
+            {/* Hero Section with Blur Effect */}
+            <div
+                className="hero-container"
                 style={{
                     position: 'relative',
                     width: '100%',
-                    height: '500px',
-                    backgroundImage: 'url(/images/Diagnostic1.jpg)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    textAlign: 'center',
-                    padding: '20px',
+                    height: '40vh',
+                    overflow: 'hidden',  // Important to contain the blur effect
                 }}
             >
-                <h1>Vehicle Diagnostics</h1>
-                <p>Identify and fix potential issues before they become major problems.</p>
-                <p>We offer advanced diagnostic services to keep your vehicle running at peak performance.</p>
+                {/* Background Image */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        zIndex: 1,
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: 'url(/images/Diagnostic1.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    }}
+                />
+                {/* Content Container */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        zIndex: 2,
+                        top: '30%',
+                        left: '30%',
+                        width: '40%',
+                        height: '55%',
+                        maxWidth: '1000px',
+                        maxHeight: '1000px',
+                        margin: 'auto',
+                        padding: '0px 0px',
+                        overflow: 'hidden',
+                        backdropFilter: 'blur(3px)',
+                        background: 'rgba(35, 35, 35, 0.8)',
+                        boxShadow: '0px 4px 4px rgba(133, 133, 133, 0.5)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        textAlign: 'center',
+                        borderRadius: '20px',
+                        border: '2px solid rgba(255, 204, 0, 0.95)',
+                    }}
+                > 
+                    <h1 style={{
+                        fontSize: '2.5rem',
+                        fontWeight: 'bold',
+                        margin: '0',
+                        color: "#fff",
+                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)',
+                    }}>
+                        Vehicle Diagnostics
+                    </h1>
+                    <p style={{
+                        fontSize: '1.2rem', 
+                        maxWidth: '600px',
+                        color: "#fff",
+                        textShadow: '1px 1px 3px rgba(0, 0, 0, 0.5)',
+                        lineHeight: '1.8',
+                    }}>
+                        Identify and fix potential issues before they become major problems. We offer advanced diagnostic services to keep your vehicle running at peak performance.
+                    </p>
+                </div>
             </div>
 
             {/* Diagnostic Services Section */}
@@ -84,7 +132,7 @@ const Diagnostic = () => {
                             justifyContent: "center",
                             alignItems: "center",
                         }}>
-                           <img 
+                            <img 
                                 src="/images/obd2.png" 
                                 alt={service.name} 
                                 style={{ width: "120px", height: "120px" }}
@@ -110,7 +158,7 @@ const Diagnostic = () => {
                 padding: "30px 20px",
                 marginTop: "40px",
             }}>
-             <h2 style={{ color: "#000" }}>Schedule Your Diagnostic Check Today</h2>
+            <h2 style={{ color: "#000" }}>Schedule Your Diagnostic Check Today</h2>
     <p style={{ color: "#000" }}>Don't wait for a breakdown! Get a professional diagnostic check to keep your car in top shape.</p>
     <button 
         style={{
