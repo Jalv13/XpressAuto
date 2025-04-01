@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { FaHome } from "react-icons/fa";
 import { FaPhone } from "react-icons/fa";
 
 
@@ -125,8 +124,8 @@ function Header() {
             </a>
             <div className={`dropdown-menu ${servicesDropdownOpen ? "show" : ""}`}>
               <Link to="/services/oil-change">Oil Change</Link>
-              <Link to="/services/tire-service">Tire Service</Link>
-              <Link to="/services/brake-service">Brake Service</Link>
+              <Link to="/services/tire-services">Tire Service</Link>
+              <Link to="/services/brake-services">Brake Service</Link>
               <Link to="/services/diagnostics">Diagnostics</Link>
             </div>
           </li>

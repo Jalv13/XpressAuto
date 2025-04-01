@@ -33,10 +33,9 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/aboutus" element={<AboutUs />} />
           <Route path="/services/oil-change" element={<OilChange />} />
-          <Route path="/services/tire-service" element={<TireService />} />
+          <Route path="/services/tire-services" element={<TireService />} />
           <Route path="/services/diagnostics" element={<Diagnostic />} />\
-          <Route path="/services/brake-service" element={<BrakeService />} />\
-          <Route path="/services/oil-change" element={<OilChange />} />
+          <Route path="/services/brake-services" element={<BrakeService />} />\
           <Route path="/appointment" element={<Appointment />} />
           <Route path="/contactus" element={<ContactUs />} />
           <Route path="/contactform" element={<ContactForm />} />

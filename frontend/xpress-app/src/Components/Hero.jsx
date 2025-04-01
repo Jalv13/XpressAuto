@@ -48,6 +48,7 @@ function Hero() {
       >
         <h2 
           style={{ 
+            color: "white",
             fontSize: '2.5rem', 
             fontWeight: 'bold', 
             textTransform: 'uppercase', 

@@ -75,8 +75,9 @@ const ContactUs = () => {
                 className="hero"
                 style={{
                     position: 'relative',
+                    padding: '100px 0',
                     width: '100%',
-                    height: '300px',
+                    height: '',
                     backgroundImage: 'url(/images/contactus.png)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',

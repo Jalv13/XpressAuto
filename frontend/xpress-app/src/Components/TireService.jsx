@@ -1,4 +1,4 @@
-//Authors: Joe, , , , ,
+//Authors: Joe, Michael, , , ,
 import Header from "./Header";
 import Footer from "./Footer";
 
@@ -27,25 +27,90 @@ const TireService = () => {
         <title>Tire Services</title>
             <Header />
             
-            {/* Hero Section */}
-            <div className="hero" 
+            {/* Hero Section with Blur Effect */}
+            <div 
+                className="hero-container"
                 style={{
                     position: 'relative',
                     width: '100%',
-                    height: '500px',
-                    backgroundImage: 'url(/images/tirechange1.jpg)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    textAlign: 'center',
-                }}>
-                <h1>Tire Services</h1>
-                <p>All Major Tire Brands Available</p>
-                <p>Goodyear, Michelin, Firestone, and more</p>
+                    height: '40vh',
+                    overflow: 'hidden',  // Important to contain the blur effect
+                }}
+            >
+                </div>
+
+                {/* Background Image */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        zIndex: 1,
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '50%',
+                        backgroundImage: 'url(/images/tirechange1.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    }}
+                />
+                {/* Content Container */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        zIndex: 2,
+                        top: '25%',
+                        left: '30%',
+                        width: '40%',
+                        height: '15%',
+                        maxWidth: '1000px',
+                        maxHeight: '1000px',
+                        margin: 'auto',
+                        padding: '0px 0px',
+                        overflow: 'hidden',
+                        backgroundImage: 'url(/images/tirechange1.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backdropFilter: 'blur(3px)',
+                        borderRadius: '20px',
+                        background: 'rgba(35, 35, 35, 0.8)',
+                        boxShadow: '0px 4px 4px rgba(133, 133, 133, 0.5)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        textAlign: 'center',
+                        border: '2px solid rgba(255, 204, 0, 0.95)',
+                    }}
+                >
+                    <h1 style={{
+                        fontSize: '2.5rem',
+                        fontWeight: 'bold',
+                        margin: '0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '2px',
+                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        Tire Services
+                    </h1>
+                    <p style={{
+                        fontSize: '1.2rem',
+                        margin: '0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        textShadow: '1px 1px 3px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        All Major Tire Brands Available
+                    </p>
+                    <p style={{
+                        fontSize: '1.2rem',
+                        margin: '0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        textShadow: '1px 1px 3px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        Goodyear, Michelin, Firestone, and more
+                    </p>
             </div>
 
             {/* Tire Services Section */}
