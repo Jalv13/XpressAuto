@@ -308,9 +308,22 @@ def get_users():
         users = cursor.fetchall()
         cursor.close()
         conn.close()
-        return jsonify({"status": "success", "users": users}), 200
+
+        # Format users for display
+        formatted_users = []
+        for u in users:
+            full_name = f"{u.get('first_name', '')} {u.get('last_name', '')}".strip()
+            formatted_users.append({
+                "user_id": u["user_id"],
+                "email": u["email"],
+                "full_name": full_name or u["email"]
+            })
+
+        return jsonify({"status": "success", "users": formatted_users}), 200
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 @app.route("/api/profile", methods=["PUT"])
