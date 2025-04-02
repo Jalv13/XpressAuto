@@ -1,7 +1,10 @@
+/* Authors: Rich, Anthony, Michael, ,  */
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import Header from "./Header";
 import Footer from "./Footer";
+
 
 function ContactForm() {
   const [formData, setFormData] = useState({
@@ -55,6 +58,7 @@ function ContactForm() {
   return (
     <div className="contact-form-container">
       <Header />
+      <title>Contact Form</title>
       <div className="form-wrapper">
         <h2>Contact Us</h2>
         
