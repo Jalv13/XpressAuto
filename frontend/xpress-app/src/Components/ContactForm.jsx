@@ -126,10 +126,8 @@ function ContactForm() {
       <div className="contact-hero">
         <div className="contact-hero-content">
           <h1>Get In Touch</h1>
-          <p>
-            We&apos;d love to hear from you! Send us a message and we'll respond
-            as soon as possible.
-          </p>
+          <p>We&apos;d love to hear from you!</p>
+          <p>Send us a message and we'll respond as soon as possible.</p>
         </div>
       </div>
 
