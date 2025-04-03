@@ -8,7 +8,7 @@ It handles user authentication, registration, and profile management operations.
 # Authors: Joshua, Rich, , , , ,
 
 from flask import Flask, jsonify, request, session
-from flask_mail import Mail,Message
+from flask_mail import Mail, Message
 from flask_cors import CORS
 from flask_login import (
     LoginManager,
@@ -313,17 +313,18 @@ def get_users():
         formatted_users = []
         for u in users:
             full_name = f"{u.get('first_name', '')} {u.get('last_name', '')}".strip()
-            formatted_users.append({
-                "user_id": u["user_id"],
-                "email": u["email"],
-                "full_name": full_name or u["email"]
-            })
+            formatted_users.append(
+                {
+                    "user_id": u["user_id"],
+                    "email": u["email"],
+                    "full_name": full_name or u["email"],
+                }
+            )
 
         return jsonify({"status": "success", "users": formatted_users}), 200
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 
 @app.route("/api/profile", methods=["PUT"])
@@ -386,7 +387,37 @@ def delete_user(user_id):
         conn.close()
 
 
-# VEHICLES
+# VEHICLES-vehicle
+
+
+@app.route("/api/update-vehicle-status/<int:vehicle_id>", methods=["PUT"])
+@login_required
+def update_vehicle_status(vehicle_id):
+    data = request.get_json()
+    new_status = data.get("vehicle_status")
+
+    if new_status not in ["Waiting", "Active", "OffLot"]:
+        return jsonify({"status": "error", "message": "Invalid vehicle status"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE vehicles SET vehicle_status = %s WHERE vehicle_id = %s RETURNING vehicle_id",
+            (new_status, vehicle_id),
+        )
+        updated = cursor.fetchone()
+        if not updated:
+            return jsonify({"status": "error", "message": "Vehicle not found"}), 404
+
+        conn.commit()
+        return jsonify({"status": "success", "message": "Vehicle status updated!"}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def allowed_file(filename):
@@ -758,6 +789,21 @@ def get_vehicle_image(vehicle_id):
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/get-vehicles/<int:user_id>", methods=["GET"])
+def get_vehicles_for_user(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM vehicles WHERE user_id = %s", (user_id,))
+        vehicles = cursor.fetchall()
+        return jsonify({"status": "success", "vehicles": vehicles}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # REVIEWS
@@ -1392,33 +1438,36 @@ def upload_profile_photo():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-    
-@app.route('/api/contact', methods=['POST'])
+
+
+@app.route("/api/contact", methods=["POST"])
 def contact():
-    app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-    app.config['MAIL_PORT'] = 587
-    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-    app.config['MAIL_USE_TLS'] = True
-    app.config['MAIL_USE_SSL'] = False
+    app.config["MAIL_SERVER"] = "smtp.gmail.com"
+    app.config["MAIL_PORT"] = 587
+    app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+    app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+    app.config["MAIL_USE_TLS"] = True
+    app.config["MAIL_USE_SSL"] = False
     mail = Mail(app)
     try:
         # Get form data from request
         data = request.json
-        name = data.get('name', '')
-        email = data.get('email', '')
-        message_body = data.get('message', '')
-        
+        name = data.get("name", "")
+        email = data.get("email", "")
+        message_body = data.get("message", "")
+
         # Create email subject with sender's name
         subject = f"Contact Form Submission from {name}"
-        
+
         # Create email message
         msg = Message(
             subject=subject,
-            sender=app.config['MAIL_USERNAME'],
-            recipients=['coulte12@go.stockton.edu'] #replace with env with client's email on deployment or demo user
+            sender=app.config["MAIL_USERNAME"],
+            recipients=[
+                "coulte12@go.stockton.edu"
+            ],  # replace with env with client's email on deployment or demo user
         )
-        
+
         # Format email body with sender's information
         msg.body = f"""
         Name: {name}
@@ -1427,66 +1476,70 @@ def contact():
         Message:
         {message_body}
         """
-        
+
         # Send email
         mail.send(msg)
-        
-        return jsonify({"status": "success", "message": "Email sent successfully!"}), 200
-    
+
+        return (
+            jsonify({"status": "success", "message": "Email sent successfully!"}),
+            200,
+        )
+
     except Exception as e:
         # Log the error (in a production environment, use a proper logging system)
         print(f"Error sending email: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/send-sms', methods=['POST'])
+
+@app.route("/api/send-sms", methods=["POST"])
 def send_sms():
-    TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-    TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-    TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+    TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
     # Get JSON data from request
     data = request.get_json()
-    
+
     # Validate required fields
-    if not all(k in data for k in ('to', 'message')):
-        return jsonify({
-            'success': False,
-            'error': 'Missing required fields: "to" and "message" are required'
-        }), 400
-    
+    if not all(k in data for k in ("to", "message")):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": 'Missing required fields: "to" and "message" are required',
+                }
+            ),
+            400,
+        )
+
     # Extract data
-    to_number = data['to']
-    message_body = data['message']
-    
+    to_number = data["to"]
+    message_body = data["message"]
+
     # Initialize Twilio client
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        
+
         # Send message
         message = client.messages.create(
-            body=message_body,
-            from_=TWILIO_PHONE_NUMBER,
-            to=to_number
+            body=message_body, from_=TWILIO_PHONE_NUMBER, to=to_number
         )
-        
+
         # Return success response with message SID
-        return jsonify({
-            'success': True,
-            'message_sid': message.sid
-        }), 200
-        
+        return jsonify({"success": True, "message_sid": message.sid}), 200
+
     except TwilioRestException as e:
         # Handle Twilio-specific errors
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
+        return jsonify({"success": False, "error": str(e)}), 400
     except Exception as e:
         # Handle any other exceptions
-        return jsonify({
-            'success': False,
-            'error': f'An unexpected error occurred: {str(e)}'
-        }), 500
+        return (
+            jsonify(
+                {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+            ),
+            500,
+        )
+
 
 # APPLICATION ENTRY POINT
 
