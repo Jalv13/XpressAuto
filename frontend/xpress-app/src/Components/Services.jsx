@@ -1,5 +1,5 @@
 //Authors: Joshua, Joe, Michael, , ,
-import { Link } from 'react-router-dom'; // Import Link from React Router
+import { Link } from "react-router-dom"; // Import Link from React Router
 
 function Services() {
   return (
@@ -9,15 +9,15 @@ function Services() {
         <Link to="/services/oil-change" className="service-link">
           <div className="service-box">Oil Change</div>
         </Link>
-        
+
         <Link to="/services/tire-services" className="service-link">
           <div className="service-box">Tire Services</div>
         </Link>
-        
+
         <Link to="/services/brake-services" className="service-link">
           <div className="service-box">Brake Services</div>
         </Link>
-        
+
         <Link to="/services/diagnostics" className="service-link">
           <div className="service-box">Diagnostics</div>
         </Link>
@@ -28,15 +28,24 @@ function Services() {
         <div className="additional-services-container">
           <div className="additional-service-card">
             <h4>Check-Up</h4>
-            <p>Comprehensive vehicle check to identify potential issues before they become problems.</p>
+            <p>
+              Comprehensive vehicle check to identify potential issues before
+              they become problems.
+            </p>
           </div>
           <div className="additional-service-card">
             <h4>Repair</h4>
-            <p>Expert repair services for all vehicle makes and models with quality parts and workmanship.</p>
+            <p>
+              Expert repair services for all vehicle makes and models with
+              quality parts and workmanship.
+            </p>
           </div>
           <div className="additional-service-card">
             <h4>Maintenance</h4>
-            <p>Regular maintenance services to keep your vehicle running smoothly and extend its lifespan.</p>
+            <p>
+              Regular maintenance services to keep your vehicle running smoothly
+              and extend its lifespan.
+            </p>
           </div>
         </div>
       </div>

@@ -1440,12 +1440,14 @@ def upload_profile_photo():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+# EMAIL
 @app.route("/api/contact", methods=["POST"])
 def contact():
     app.config["MAIL_SERVER"] = "smtp.gmail.com"
     app.config["MAIL_PORT"] = 587
     app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
     app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+    app.config["MAIL_RECIPIENT"] = os.environ.get("MAIL_RECIPIENT")
     app.config["MAIL_USE_TLS"] = True
     app.config["MAIL_USE_SSL"] = False
     mail = Mail(app)
@@ -1464,7 +1466,7 @@ def contact():
             subject=subject,
             sender=app.config["MAIL_USERNAME"],
             recipients=[
-                "coulte12@go.stockton.edu"
+                app.config["MAIL_RECIPIENT"]
             ],  # replace with env with client's email on deployment or demo user
         )
 
