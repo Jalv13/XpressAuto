@@ -8,8 +8,9 @@ import {
   FaComment,
   FaPaperPlane,
   FaSpinner,
+  FaTag,
 } from "react-icons/fa";
-import '../index.css';  /
+import "../index.css";
 function ContactForm() {
   const [formData, setFormData] = useState({
     name: "",
@@ -123,11 +124,11 @@ function ContactForm() {
       <Header />
 
       <div className="contact-hero">
-        <div className="contact-hero-content" >
+        <div className="contact-hero-content">
           <h1>Get In Touch</h1>
           <p>
-            We'd love to hear from you! Send us a message and we'll respond as
-            soon as possible.
+            We&apos;d love to hear from you! Send us a message and we'll respond
+            as soon as possible.
           </p>
         </div>
       </div>
@@ -147,7 +148,7 @@ function ContactForm() {
             <i className="fa-solid fa-phone"></i>
             <div>
               <h3>Phone</h3>
-              <p>(609) 555-1234</p>
+              <p>(609) 348-0894</p>
             </div>
           </div>
 
@@ -163,8 +164,8 @@ function ContactForm() {
             <i className="fa-solid fa-clock"></i>
             <div>
               <h3>Hours</h3>
-              <p>Monday - Friday: 8:00 AM - 6:00 PM</p>
-              <p>Saturday: 9:00 AM - 4:00 PM</p>
+              <p>Monday - Friday: 8:30 AM - 5:30 PM</p>
+              <p>Saturday: 8:30 AM - 5:30 PM</p>
               <p>Sunday: Closed</p>
             </div>
           </div>
@@ -244,7 +245,7 @@ function ContactForm() {
 
             <div className="form-group">
               <label htmlFor="subject">
-                <i className="fa-solid fa-heading"></i> Subject (Optional)
+                <FaTag /> Subject (Optional)
               </label>
               <input
                 type="text"
