@@ -1,121 +1,314 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Header from "./Header";
 import Footer from "./Footer";
-
+import {
+  FaUser,
+  FaEnvelope,
+  FaComment,
+  FaPaperPlane,
+  FaSpinner,
+} from "react-icons/fa";
+import '../index.css';  /
 function ContactForm() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    message: ''
+    name: "",
+    email: "",
+    subject: "", // Added subject field
+    message: "",
   });
+
   const [status, setStatus] = useState({
     submitted: false,
     submitting: false,
-    info: { error: false, msg: null }
+    info: { error: false, msg: null },
   });
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+  const [validation, setValidation] = useState({
+    name: true,
+    email: true,
+    message: true,
+  });
+
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    let timer;
+    if (status.submitted && !status.info.error) {
+      timer = setTimeout(() => {
+        setStatus((prevState) => ({
+          ...prevState,
+          submitted: false,
+          info: { ...prevState.info, msg: null },
+        }));
+      }, 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [status.submitted, status.info.error]);
+
+  const validateEmail = (email) => {
+    const re =
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
   };
 
-  const handleSubmit = async e => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+
+    // Clear validation errors when user types
+    if (name in validation) {
+      setValidation((prev) => ({
+        ...prev,
+        [name]: true,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(prevState => ({ ...prevState, submitting: true }));
-    
+
+    // Validate form
+    const nameValid = formData.name.trim() !== "";
+    const emailValid = validateEmail(formData.email);
+    const messageValid = formData.message.trim() !== "";
+
+    setValidation({
+      name: nameValid,
+      email: emailValid,
+      message: messageValid,
+    });
+
+    if (!nameValid || !emailValid || !messageValid) {
+      return;
+    }
+
+    setStatus((prevState) => ({ ...prevState, submitting: true }));
+
     try {
-      // Make a POST request to your Flask API endpoint
-      await axios.post('http://127.0.0.1:5000/api/contact', formData);
-      
+      await axios.post("http://127.0.0.1:5000/api/contact", formData);
+
       setStatus({
         submitted: true,
         submitting: false,
-        info: { error: false, msg: 'Message sent successfully!' }
+        info: {
+          error: false,
+          msg: "Thank you! Your message has been sent successfully.",
+        },
       });
-      
-      // Reset form after successful submission
+
       setFormData({
-        name: '',
-        email: '',
-        message: ''
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
       });
-      
     } catch (error) {
       setStatus({
         submitted: false,
         submitting: false,
-        info: { error: true, msg: 'An error occurred. Please try again later.' }
+        info: {
+          error: true,
+          msg: "There was an error sending your message. Please try again later.",
+        },
       });
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
     }
   };
 
   return (
-    <div className="contact-form-container">
-      <Header/>
-      <h2>Contact Us</h2>
-      
-      {status.info.error && (
-        <div className="error-message">
-          <p>{status.info.msg}</p>
+    <div className="contact-page">
+      <Header />
+
+      <div className="contact-hero">
+        <div className="contact-hero-content" >
+          <h1>Get In Touch</h1>
+          <p>
+            We'd love to hear from you! Send us a message and we'll respond as
+            soon as possible.
+          </p>
         </div>
-      )}
-      
-      {status.submitted && !status.info.error && (
-        <div className="success-message">
-          <p>{status.info.msg}</p>
+      </div>
+
+      <div className="contact-container">
+        <div className="contact-info">
+          <h2>Contact Information</h2>
+          <div className="info-item">
+            <i className="fa-solid fa-location-dot"></i>
+            <div>
+              <h3>Address</h3>
+              <p>2425 Atlantic Ave, Atlantic City, NJ 08401</p>
+            </div>
+          </div>
+
+          <div className="info-item">
+            <i className="fa-solid fa-phone"></i>
+            <div>
+              <h3>Phone</h3>
+              <p>(609) 555-1234</p>
+            </div>
+          </div>
+
+          <div className="info-item">
+            <i className="fa-solid fa-envelope"></i>
+            <div>
+              <h3>Email</h3>
+              <p>info@xpressauto.com</p>
+            </div>
+          </div>
+
+          <div className="info-item">
+            <i className="fa-solid fa-clock"></i>
+            <div>
+              <h3>Hours</h3>
+              <p>Monday - Friday: 8:00 AM - 6:00 PM</p>
+              <p>Saturday: 9:00 AM - 4:00 PM</p>
+              <p>Sunday: Closed</p>
+            </div>
+          </div>
+
+          <div className="social-links">
+            <a href="#" aria-label="Facebook">
+              <i className="fa-brands fa-facebook"></i>
+            </a>
+            <a href="#" aria-label="Twitter">
+              <i className="fa-brands fa-twitter"></i>
+            </a>
+            <a href="#" aria-label="Instagram">
+              <i className="fa-brands fa-instagram"></i>
+            </a>
+          </div>
         </div>
-      )}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+
+        <div className="contact-form-wrapper">
+          <h2>Send us a message</h2>
+
+          {status.info.error && (
+            <div className="message error-message">
+              <i className="fa-solid fa-circle-exclamation"></i>
+              <p>{status.info.msg}</p>
+            </div>
+          )}
+
+          {status.submitted && !status.info.error && (
+            <div className="message success-message">
+              <i className="fa-solid fa-circle-check"></i>
+              <p>{status.info.msg}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="contact-form">
+            <div
+              className={`form-group ${!validation.name ? "has-error" : ""}`}
+            >
+              <label htmlFor="name">
+                <FaUser /> Full Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Your name"
+                required
+              />
+              {!validation.name && (
+                <span className="error-text">Please enter your name</span>
+              )}
+            </div>
+
+            <div
+              className={`form-group ${!validation.email ? "has-error" : ""}`}
+            >
+              <label htmlFor="email">
+                <FaEnvelope /> Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Your email address"
+                required
+              />
+              {!validation.email && (
+                <span className="error-text">
+                  Please enter a valid email address
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="subject">
+                <i className="fa-solid fa-heading"></i> Subject (Optional)
+              </label>
+              <input
+                type="text"
+                id="subject"
+                name="subject"
+                value={formData.subject}
+                onChange={handleChange}
+                placeholder="What is this regarding?"
+              />
+            </div>
+
+            <div
+              className={`form-group ${!validation.message ? "has-error" : ""}`}
+            >
+              <label htmlFor="message">
+                <FaComment /> Message
+              </label>
+              <textarea
+                id="message"
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                placeholder="Please type your message here..."
+                rows="5"
+                required
+              />
+              {!validation.message && (
+                <span className="error-text">Please enter your message</span>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={status.submitting}
+              className="submit-button"
+            >
+              {status.submitting ? (
+                <>
+                  <FaSpinner className="spinner" /> Sending...
+                </>
+              ) : (
+                <>
+                  <FaPaperPlane /> Send Message
+                </>
+              )}
+            </button>
+          </form>
         </div>
-        
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        
-        <div className="form-group">
-          <label htmlFor="message">Message</label>
-          <textarea
-            id="message"
-            name="message"
-            value={formData.message}
-            onChange={handleChange}
-            rows="5"
-            required
-          />
-        </div>
-        
-        <button 
-          type="submit" 
-          disabled={status.submitting}
-        >
-          {status.submitting ? 'Sending...' : 'Send Message'}
-        </button>
-      </form>
-      <Footer/>
+      </div>
+
+      <div className="map-container">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3064.2842367164823!2d-74.44390482438062!3d39.357131125932215!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c5ee162cc47c01%3A0x8644b2fa27ea2323!2s2425%20Atlantic%20Ave%2C%20Atlantic%20City%2C%20NJ%2008401!5e0!3m2!1sen!2sus!4v1712177591493!5m2!1sen!2sus"
+          width="100%"
+          height="450"
+          style={{ border: 0 }}
+          allowFullScreen=""
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          title="XpressAuto Location"
+        ></iframe>
+      </div>
+
+      <Footer />
     </div>
   );
 }
