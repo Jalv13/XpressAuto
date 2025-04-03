@@ -1366,9 +1366,10 @@ input[type="file"] {
   }
 }
 
+/* CONTACT FORM */
 /* Basic styles for the container */
 .contact-form-container {
-  font-family: 'Arial', sans-serif;
+  font-family: "Arial", sans-serif;
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
@@ -1402,7 +1403,8 @@ label {
 }
 
 /* Input field styling */
-input, textarea {
+input,
+textarea {
   width: 100%;
   padding: 10px;
   font-size: 1rem;
@@ -1412,13 +1414,15 @@ input, textarea {
   transition: all 0.3s ease;
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
   border-color: #4caf50;
   outline: none;
 }
 
 /* Styling for success and error messages */
-.success-message, .error-message {
+.success-message,
+.error-message {
   text-align: center;
   font-size: 1rem;
   padding: 10px;
@@ -1461,17 +1465,15 @@ input:focus, textarea:focus {
   .contact-form-container {
     padding: 10px;
   }
-  
+
   .form-wrapper {
     padding: 15px;
   }
-  
+
   h2 {
     font-size: 1.5rem;
   }
 }
-
-/*------ Services.jsx pt2--------*/
 
 /* Services.css */
 
@@ -1542,7 +1544,7 @@ input:focus, textarea:focus {
 }
 
 .additional-services h3::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 50%;
@@ -1594,25 +1596,24 @@ input:focus, textarea:focus {
   .services h2 {
     font-size: 1.8rem;
   }
-  
+
   .additional-services h3 {
     font-size: 1.5rem;
   }
-  
+
   .services-container {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
-  
+
   .additional-services-container {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
-  
+
   .additional-service-card h4 {
     font-size: 1.1rem;
   }
-  
+
   .additional-service-card p {
     font-size: 0.9rem;
   }
 }
-/* ---------- End of Services.jsx ---------- */
