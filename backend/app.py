@@ -29,6 +29,7 @@ import boto3
 import mimetypes
 import uuid
 import requests
+from datetime import datetime
 from dotenv import load_dotenv
 
 
@@ -887,6 +888,15 @@ def create_invoice():
         if not user:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
+        # Generate a unique invoice number
+        current_year = datetime.now().year
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM invoices WHERE EXTRACT(YEAR FROM issue_date) = %s",
+            (current_year,),
+        )
+        count = cursor.fetchone()["count"] + 1
+        invoice_number = f"INV-{current_year}-{count:04d}"
+
         cursor.execute(
             """
             INSERT INTO invoices (user_id, vehicle_id, invoice_number, subtotal, tax_amount, discount_amount, total_amount, status, due_date, notes)
@@ -895,7 +905,7 @@ def create_invoice():
             (
                 user["user_id"],
                 data["vehicle_id"],
-                data["invoice_number"],
+                invoice_number,
                 data["subtotal"],
                 data["tax_amount"],
                 data["discount_amount"],
@@ -908,7 +918,7 @@ def create_invoice():
 
         invoice_id = cursor.fetchone()["invoice_id"]
 
-        for item in data["items"]:
+        for item in data.get("items", []):
             cursor.execute(
                 """
                 INSERT INTO invoice_items (invoice_id, service_id, history_id, description, quantity, unit_price, discount_amount, total_price)
@@ -927,7 +937,16 @@ def create_invoice():
             )
 
         conn.commit()
-        return jsonify({"status": "success", "invoice_id": invoice_id}), 201
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "invoice_id": invoice_id,
+                    "invoice_number": invoice_number,
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
         conn.rollback()
@@ -1050,6 +1069,66 @@ def mark_notification_read(notification_id):
 
     except Exception as e:
         conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# SERVICES
+# Add this route to your Flask app.py
+
+
+@app.route("/api/add-service", methods=["POST"])
+# @login_required need to implement admin check
+def add_service():
+    """Adds a new service to the database."""
+    data = request.get_json()
+
+    # Basic validation
+    if (
+        not data
+        or not data.get("service_name")
+        or not data.get("service_description")
+        or not data.get("service_price")
+    ):
+        return (
+            jsonify({"status": "error", "message": "Missing required service fields"}),
+            400,
+        )
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            INSERT INTO services (name, description, base_price, is_active)
+            VALUES (%s, %s, %s, %s) RETURNING service_id
+            """,
+            (
+                data["service_name"],
+                data["service_description"],
+                data["service_price"],
+                True,  # Default to active, or get from request if needed
+            ),
+        )
+        new_service_id = cursor.fetchone()["service_id"]
+        conn.commit()
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Service added successfully!",
+                    "service_id": new_service_id,
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error adding service: {e}")  # Use app logger
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()

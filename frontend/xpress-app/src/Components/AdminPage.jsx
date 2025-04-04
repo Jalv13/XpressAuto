@@ -227,6 +227,12 @@ function AdminPage() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
 
+  //Invoice State
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState("");
+  const [invoiceSelectedUser, setInvoiceSelectedUser] = useState("");
+  const [vehiclesForInvoice, setVehiclesForInvoice] = useState([]);
+  const [isLoadingInvoiceNumber, setIsLoadingInvoiceNumber] = useState(false);
+
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
@@ -234,7 +240,8 @@ function AdminPage() {
     if (
       modalName === "sendNotifications" ||
       modalName === "addLoyaltyPoints" ||
-      modalName === "updateVehicleStatus"
+      modalName === "updateVehicleStatus" ||
+      modalName === "sendInvoice"
     ) {
       // Fetch users for these modals
       axios
@@ -246,7 +253,6 @@ function AdminPage() {
         })
         .catch((err) => console.error("Error fetching users:", err));
     }
-    // For other modals you can add additional fetching as needed
   };
 
   const closeModal = () => {
@@ -285,6 +291,41 @@ function AdminPage() {
   };
 
   // Handlers for form submissions
+  const handleInvoiceUserChange = (e) => {
+    const userId = e.target.value;
+    setInvoiceSelectedUser(userId);
+    setInvoiceEmail(
+      users.find((user) => user.user_id === parseInt(userId))?.email || ""
+    );
+
+    // Fetch vehicles for the selected user
+    axios
+      .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setVehiclesForInvoice(res.data.vehicles);
+        }
+      })
+      .catch((err) =>
+        console.error("Error fetching vehicles for invoice:", err)
+      );
+  };
+
+  // Add this handler for vehicle selection
+  const handleInvoiceVehicleChange = (e) => {
+    setInvoiceVehicleId(e.target.value);
+  };
+  //search users in invoice modal
+  const filteredInvoiceUsers = users.filter((user) => {
+    const query = invoiceSearchQuery.toLowerCase();
+    return (
+      user.full_name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      (user.phone && user.phone.toLowerCase().includes(query))
+    );
+  });
 
   const handleNotificationSubmit = async (e) => {
     e.preventDefault();
@@ -463,13 +504,13 @@ function AdminPage() {
   });
 
   // Filter vehicles based on license plate query (if needed elsewhere)
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const query = vehicleSearchQuery.toLowerCase();
-    return (
-      vehicle.license_plate &&
-      vehicle.license_plate.toLowerCase().includes(query)
-    );
-  });
+  // const filteredVehicles = vehicles.filter((vehicle) => {
+  //   const query = vehicleSearchQuery.toLowerCase();
+  //   return (
+  //     vehicle.license_plate &&
+  //     vehicle.license_plate.toLowerCase().includes(query)
+  //   );
+  // });
 
   return (
     <>
@@ -507,7 +548,6 @@ function AdminPage() {
           </section>
         </div>
       </main>
-
       {/* Send Notifications Modal */}
       <Modal
         isOpen={activeModal === "sendNotifications"}
@@ -554,7 +594,6 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
-
       {/* Add User Modal */}
       <Modal isOpen={activeModal === "addUser"} onRequestClose={closeModal}>
         <div className="modal-content">
@@ -604,7 +643,6 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
-
       {/* Add Service Modal */}
       <Modal isOpen={activeModal === "addService"} onRequestClose={closeModal}>
         <div className="modal-content">
@@ -643,7 +681,6 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
-
       {/* Add Loyalty Points Modal */}
       <Modal
         isOpen={activeModal === "addLoyaltyPoints"}
@@ -689,7 +726,6 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
-
       {/* Update Vehicle Status Modal */}
       <Modal
         isOpen={activeModal === "updateVehicleStatus"}
@@ -750,7 +786,6 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
-
       {/* Send Invoice Modal */}
       <Modal isOpen={activeModal === "sendInvoice"} onRequestClose={closeModal}>
         <div className="modal-content">
@@ -763,28 +798,59 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
+          {/* Search input similar to loyalty points */}
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone"
+            value={invoiceSearchQuery}
+            onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+          />
           <form className="modal-form" onSubmit={handleSendInvoiceSubmit}>
-            <input
-              type="email"
-              placeholder="User Email"
-              value={invoiceEmail}
-              onChange={(e) => setInvoiceEmail(e.target.value)}
+            {/* User selection dropdown */}
+            <select
+              value={invoiceSelectedUser}
+              onChange={handleInvoiceUserChange}
               required
-            />
-            <input
-              type="text"
-              placeholder="Vehicle ID"
+            >
+              <option value="">Select User</option>
+              {filteredInvoiceUsers.map((user) => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.full_name} ({user.email})
+                </option>
+              ))}
+            </select>
+
+            {/* Vehicle selection dropdown */}
+            <select
               value={invoiceVehicleId}
-              onChange={(e) => setInvoiceVehicleId(e.target.value)}
+              onChange={handleInvoiceVehicleChange}
               required
-            />
-            <input
-              type="text"
-              placeholder="Invoice Number"
-              value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
-              required
-            />
+            >
+              <option value="">Select Vehicle</option>
+              {vehiclesForInvoice.map((vehicle) => (
+                <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+                  {vehicle.license_plate} - {vehicle.make} {vehicle.model}
+                </option>
+              ))}
+            </select>
+
+            {/* Hidden email field that gets populated automatically */}
+            <input type="hidden" value={invoiceEmail} />
+
+            <div className="input-with-label">
+              <label>Invoice Number</label>
+              <input
+                type="text"
+                placeholder={
+                  isLoadingInvoiceNumber ? "Generating..." : "Invoice Number"
+                }
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                disabled
+                required
+              />
+              <small>Automatically generated</small>
+            </div>
             <input
               type="number"
               placeholder="Subtotal"
@@ -813,13 +879,16 @@ function AdminPage() {
               onChange={(e) => setTotalAmount(e.target.value)}
               required
             />
-            <input
-              type="text"
-              placeholder="Invoice Status"
+            <select
               value={invoiceStatus}
               onChange={(e) => setInvoiceStatus(e.target.value)}
               required
-            />
+            >
+              <option value="">Select Status</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
             <input
               type="date"
               placeholder="Due Date"
@@ -837,7 +906,6 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
-
       <Footer />
     </>
   );
