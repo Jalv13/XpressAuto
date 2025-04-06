@@ -70,7 +70,6 @@ AWS_REGION = os.getenv("AWS_REGION", "paste-here")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "paste-here")
 
 
-
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=AWS_ACCESS_KEY,
@@ -97,10 +96,6 @@ def get_db_connection():
         port=DB_PORT,
         cursor_factory=RealDictCursor,  # Returns results as dictionaries
     )
-
-
-
-
 
 
 # USER MODEL
@@ -1626,33 +1621,32 @@ def send_sms():
             500,
         )
 
-# STRIPE
-# 1. Stripe setup
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
-# 2. Create payment intent endpoint
-@app.route('/api/create-payment-intent', methods=['POST'])
-@login_required
-def create_payment_intent():
-    data = request.json
-    invoice_id = data.get('invoice_id')
-    
-    # Get invoice details from database
-    # Create payment intent with Stripe
-    # Return client_secret to frontend
-    
-# 3. Webhook handler
-@app.route('/api/webhook', methods=['POST'])
-def stripe_webhook():
-    # Verify webhook signature
-    # Process event based on type
-    # Update database
-    
-# 4. Record payment in database
-def record_payment(invoice_id, payment_intent):
-    # Create entry in payments table
+# # STRIPE
+# # 1. Stripe setup
+# stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
+# # 2. Create payment intent endpoint
+# @app.route('/api/create-payment-intent', methods=['POST'])
+# @login_required
+# def create_payment_intent():
+#     data = request.json
+#     invoice_id = data.get('invoice_id')
 
+#     # Get invoice details from database
+#     # Create payment intent with Stripe
+#     # Return client_secret to frontend
+
+# # 3. Webhook handler
+# @app.route('/api/webhook', methods=['POST'])
+# def stripe_webhook():
+#     # Verify webhook signature
+#     # Process event based on type
+#     # Update database
+
+# # 4. Record payment in database
+# def record_payment(invoice_id, payment_intent):
+#     # Create entry in payments table
 
 
 # APPLICATION ENTRY POINT

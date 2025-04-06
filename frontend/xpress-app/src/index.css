@@ -349,22 +349,6 @@ body {
 }
 
 /* Services Section */
-.services {
-  padding: 30px;
-  text-align: center;
-}
-
-.services h2 {
-  margin-bottom: 25px;
-  font-size: 28px;
-}
-
-.services-container {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 0 20px;
-}
 
 .service-box {
   padding: 25px 15px;
