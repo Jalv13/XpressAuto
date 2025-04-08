@@ -188,7 +188,8 @@ function Header() {
         <button className="icon-button" aria-label="Search">
           <i className="fa-solid fa-search"></i>
         </button>
-        <Link to="/contactus">
+        <Link to="#">
+          {/* IMPLEMENT TEL LINK THAT IS VISIBLE BASED ON SCREEN SIZE */}
           <button className="icon-button phone-button" aria-label="Contact Us">
             <FaPhone />
           </button>
