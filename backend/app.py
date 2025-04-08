@@ -31,7 +31,8 @@ import uuid
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
-
+import stripe
+from decimal import Decimal
 
 load_dotenv()
 
@@ -77,15 +78,19 @@ s3_client = boto3.client(
     region_name=AWS_REGION,
 )
 
-# LOGIN MANAGEMENT
+# Stripe
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv(
+    "STRIPE_WEBHOOK_SECRET"
+)  # For webhook verification later need to pull this from stripe cli tool
 
+# LOGIN MANAGEMENT
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+
 # DATABASE CONNECTION
-
-
 def get_db_connection():
     """Establishes and returns a connection to the PostgreSQL database"""
     return psycopg2.connect(
@@ -954,6 +959,242 @@ def create_invoice():
     finally:
         cursor.close()
         conn.close()
+
+
+# Create Invoice
+@app.route("/api/create-payment-intent", methods=["POST"])
+@login_required  # Ensure user is logged in
+def create_payment_intent():
+    conn = None  # Initialize conn to None for finally block safety
+    cursor = None  # Initialize cursor to None
+    try:
+        # 1. Get invoice_id from the frontend request
+        data = request.get_json()
+        invoice_id = data.get("invoice_id")
+
+        if not invoice_id:
+            return jsonify(error={"message": "Missing invoice_id"}), 400
+
+        # 2. Database Lookup (using established pattern)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Fetch invoice details AND verify ownership by current_user
+        cursor.execute(
+            """SELECT invoice_id, total_amount, status, currency 
+               FROM invoices 
+               WHERE invoice_id = %s AND user_id = %s""",
+            (invoice_id, current_user.id),  # Check user_id!
+        )
+        invoice = cursor.fetchone()
+
+        if not invoice:
+            # Either invoice doesn't exist OR it doesn't belong to this user
+            return (
+                jsonify(error={"message": "Invoice not found or not authorized"}),
+                404,
+            )
+
+        total_amount_decimal = invoice["total_amount"]
+        status = invoice["status"]
+        # Assumes you added the currency column, defaults to 'usd' if somehow NULL
+        currency = invoice.get("currency", "usd").lower()
+
+        # 3. Check Invoice Status
+        # Modify this check based on your exact status names ('unpaid', 'due', etc.)
+        if status.lower() not in ["unpaid", "due"]:
+            return (
+                jsonify(
+                    error={"message": f'Invoice status is "{status}", not payable'}
+                ),
+                400,
+            )
+
+        # 4. Convert amount to cents (or smallest currency unit)
+        amount_in_cents = int(total_amount_decimal * 100)
+
+        # 5. Create Payment Intent with Stripe
+        payment_intent = stripe.PaymentIntent.create(
+            amount=amount_in_cents,
+            currency=currency,
+            # Add metadata to link back to your system - ESSENTIAL for webhook
+            metadata={"invoice_id": invoice_id, "user_id": current_user.id},
+            description=f"Payment for Invoice ID {invoice_id}",  # Optional but helpful
+        )
+
+        # 6. Send client_secret back to the frontend
+        return jsonify(clientSecret=payment_intent.client_secret)
+
+    except stripe.error.StripeError as e:
+        app.logger.error(f"Stripe API error: {e}")
+        return jsonify(error={"message": str(e)}), 500
+    except psycopg2.Error as db_error:
+        app.logger.error(f"Database error: {db_error}")
+        # Don't rollback here as it was likely a SELECT, but log it
+        return jsonify(error={"message": "Database error accessing invoice"}), 500
+    except Exception as e:
+        app.logger.error(f"Error creating payment intent: {e}")
+        return jsonify(error={"message": "Internal server error"}), 500
+    finally:
+        # Ensure cursor and connection are closed
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.route("/api/webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.data  # Raw request body
+    sig_header = request.headers.get("Stripe-Signature")
+    event = None
+
+    # Ensure the webhook secret is configured
+    if not STRIPE_WEBHOOK_SECRET:
+        app.logger.error("Stripe webhook secret not configured.")
+        return jsonify(error="Webhook secret not configured"), 500
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        # Invalid payload
+        app.logger.error(f"Webhook ValueError: {e}")
+        return jsonify(error="Invalid payload"), 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        app.logger.error(f"Webhook SignatureVerificationError: {e}")
+        return jsonify(error="Invalid signature"), 400
+    except Exception as e:
+        app.logger.error(f"Webhook general error during construct_event: {e}")
+        return jsonify(error=str(e)), 500
+
+    # Webhook Handler
+    # --- Handle the event ---
+    conn = None
+    cursor = None
+    try:
+        # Handle the payment_intent.succeeded event
+        if event["type"] == "payment_intent.succeeded":
+            payment_intent = event["data"]["object"]  # contains a stripe.PaymentIntent
+            app.logger.info(
+                f"Webhook received: PaymentIntent {payment_intent['id']} succeeded."
+            )
+
+            # Extract metadata
+            metadata = payment_intent.get("metadata", {})
+            invoice_id = metadata.get("invoice_id")
+            user_id = metadata.get("user_id")  # Good to have if stored
+
+            if not invoice_id:
+                app.logger.error(
+                    f"Webhook Error: Missing invoice_id in metadata for PaymentIntent {payment_intent['id']}"
+                )
+                # Still return 200 to Stripe, but log the error
+                return jsonify(success=True)
+
+            amount_received = payment_intent["amount_received"]  # Amount in cents
+
+            # TODO: Connect to DB and update invoice status & record payment
+            #       using invoice_id and payment_intent details.
+            #       Remember to handle idempotency (check if already processed).
+
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # ---- Database Update Logic (To be refined/added) ----
+
+            # 1. Check if payment already recorded (Idempotency)
+            cursor.execute(
+                "SELECT 1 FROM payments WHERE transaction_id = %s",
+                (payment_intent["id"],),
+            )
+            if cursor.fetchone():
+                app.logger.info(
+                    f"Webhook: Payment for transaction_id {payment_intent['id']} already recorded."
+                )
+                # Already processed, acknowledge successfully
+                return jsonify(success=True)
+
+            # 2. Use a transaction
+            conn.autocommit = False  # Start transaction block (psycopg2 specific)
+
+            # 3. Update Invoice Status
+            cursor.execute(
+                """UPDATE invoices 
+                   SET status = 'paid' 
+                   WHERE invoice_id = %s AND status != 'paid'""",  # Avoid re-updating if somehow already paid
+                (invoice_id,),
+            )
+            if cursor.rowcount == 0:
+                app.logger.warning(
+                    f"Webhook: Invoice {invoice_id} not found or already marked paid during update attempt for PI {payment_intent['id']}."
+                )
+                # Decide if this is an error or just info. Maybe proceed to log payment anyway?
+                # For now, let's proceed to log the payment, but log a warning.
+
+            # 4. Insert into Payments Table
+            paid_amount_decimal = (
+                Decimal(amount_received) / 100
+            )  # Convert cents to decimal
+
+            cursor.execute(
+                """INSERT INTO payments 
+                   (invoice_id, payment_method, amount, payment_date, transaction_id, status, notes) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    invoice_id,
+                    "stripe",  # Payment method
+                    paid_amount_decimal,  # Amount paid (Decimal)
+                    datetime.fromtimestamp(
+                        payment_intent["created"]
+                    ),  # Use PaymentIntent creation time or now()
+                    payment_intent["id"],  # Stripe Payment Intent ID
+                    "completed",  # Payment status
+                    f"Stripe PaymentIntent ID: {payment_intent['id']}",  # Optional notes
+                ),
+            )
+
+            # 5. Commit Transaction
+            conn.commit()
+            app.logger.info(
+                f"Webhook: Successfully processed PaymentIntent {payment_intent['id']} for invoice {invoice_id}. Invoice marked paid, payment logged."
+            )
+
+        # Handle other event types (optional)
+        elif event["type"] == "payment_intent.payment_failed":
+            payment_intent = event["data"]["object"]
+            # Optional: Update invoice status to 'failed' or log the failure
+            app.logger.warning(
+                f"Webhook received: PaymentIntent {payment_intent['id']} failed."
+            )
+
+        else:
+            app.logger.info(f"Webhook received unhandled event type: {event['type']}")
+
+    except psycopg2.Error as db_error:
+        app.logger.error(f"Webhook DB Error: {db_error}")
+        if conn:
+            conn.rollback()  # Rollback on error
+        # Don't return 500 to Stripe here, let it retry if possible.
+        # Log it aggressively. Maybe return 200 but log? Or let it retry?
+        # For now, let's return 500 to signal a processing failure.
+        return jsonify(error="Database processing error"), 500
+    except Exception as e:
+        app.logger.error(f"Webhook handler general error: {e}")
+        if conn:
+            conn.rollback()  # Rollback on error
+        return jsonify(error="Internal processing error"), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.autocommit = True  # Reset autocommit
+            conn.close()
+
+    # Acknowledge receipt to Stripe
+    return jsonify(success=True)
 
 
 # Get Invoice
