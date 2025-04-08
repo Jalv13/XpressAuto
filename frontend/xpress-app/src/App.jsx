@@ -15,7 +15,6 @@ import TireService from "./Components/TireService.jsx";
 import Diagnostic from "./Components/Diagnostic.jsx";
 import BrakeService from "./Components/BrakeService.jsx";
 import Appointment from "./Components/Appointment.jsx";
-import ContactUs from "./Components/ContactUs.jsx";
 import ContactForm from "./Components/ContactForm.jsx";
 import AdminPage from "./Components/AdminPage.jsx";
 
@@ -37,7 +36,6 @@ function App() {
           <Route path="/services/diagnostics" element={<Diagnostic />} />\
           <Route path="/services/brake-services" element={<BrakeService />} />\
           <Route path="/appointment" element={<Appointment />} />
-          <Route path="/contactus" element={<ContactUs />} />
           <Route path="/contactform" element={<ContactForm />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
