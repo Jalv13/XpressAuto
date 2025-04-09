@@ -207,7 +207,6 @@ function AdminPage() {
   const [loyaltyPoints, setLoyaltyPoints] = useState("");
 
   // Update Vehicle Status state
-  const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [newVehicleStatus, setNewVehicleStatus] = useState("OffLot");
   // New states for vehicle status modal: user selection and that user’s vehicles

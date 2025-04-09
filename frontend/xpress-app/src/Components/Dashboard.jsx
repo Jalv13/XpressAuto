@@ -8,6 +8,19 @@ import Footer from "./Footer";
 import ContentLoader from "react-content-loader"; // For animated skeletons
 import Modal from "react-modal";
 import { Copy, Trash2, X } from "lucide-react";
+// imports for stripe
+import { loadStripe } from "@stripe/stripe-js";
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "./CheckoutForm";
+
+// debugging making sure key is loaded
+if (!stripePublicKey) {
+  console.error(
+    "CRITICAL ERROR: Stripe Publishable Key is not defined in the environment variables (.env file). Please ensure it is set and the development server was restarted."
+  );
+}
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 function Dashboard() {
   const { user, loading } = useAuth();
@@ -29,6 +42,11 @@ function Dashboard() {
 
   const [vehiclePhotoFile, setVehiclePhotoFile] = useState(null);
   const [vehiclePhotoPreview, setVehiclePhotoPreview] = useState("");
+
+  // Stripe states
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
+    useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
 
   // State for toggling the Add Vehicle form
   const [showAddVehicle, setShowAddVehicle] = useState(false);
@@ -393,6 +411,74 @@ function Dashboard() {
     }
   };
 
+  // stripe functions
+  const handlePayInvoice = async (invoiceId) => {
+    console.log(`Attempting to pay invoice ID: ${invoiceId}`); // Log which invoice is being processed
+
+    // Reset any previous payment attempts or messages
+    setSelectedInvoiceForPayment(null);
+    setClientSecret(null);
+    setMessage("Preparing payment..."); // Provide immediate feedback
+
+    try {
+      // Make the POST request to your Flask backend endpoint
+      const response = await axios.post(
+        "http://localhost:5000/api/create-payment-intent", // Your backend URL
+        { invoice_id: invoiceId }, // Send the invoice ID in the request body
+        { withCredentials: true } // Important for Flask-Login session cookies
+      );
+
+      // Check if the request was successful and we received a clientSecret
+      if (response.data && response.data.clientSecret) {
+        console.log("Received clientSecret:", response.data.clientSecret);
+
+        // Update state with the received clientSecret and the selected invoice ID
+        setClientSecret(response.data.clientSecret);
+        setSelectedInvoiceForPayment(invoiceId);
+        setMessage(""); // Clear the "Preparing payment..." message
+      } else {
+        // Handle cases where the backend response is okay (e.g., 200 OK) but doesn't contain the expected secret
+        console.error("Backend response missing clientSecret:", response.data);
+        setMessage("Failed to initialize payment. Please try again.");
+        setSelectedInvoiceForPayment(null); // Ensure reset
+        setClientSecret(null); // Ensure reset
+      }
+    } catch (error) {
+      // Handle errors during the API call (network errors, backend errors like 4xx or 5xx)
+      console.error("Error creating payment intent:", error);
+
+      // Try to get a specific error message from the backend response
+      const errorMessage =
+        error.response?.data?.error?.message ||
+        error.message || // Fallback to Axios error message
+        "An unexpected error occurred while preparing payment.";
+
+      setMessage(errorMessage); // Display the error to the user
+      setSelectedInvoiceForPayment(null); // Reset selected invoice on error
+      setClientSecret(null); // Reset client secret on error
+    }
+  };
+  // Stripe Sucess
+  const handlePaymentSuccess = (paymentIntentId) => {
+    console.log("Payment successful! Payment Intent ID:", paymentIntentId);
+    setMessage("Payment Successful!"); // Update the main message state
+
+    // Reset the payment-specific state
+    setClientSecret(null);
+    setSelectedInvoiceForPayment(null);
+
+    // Refresh the invoices list to show the updated 'paid' status
+    fetchInvoices();
+
+    // TODO: NEED TO IMPLEMENT PAYMENT STATUS UPDATE IN DB
+
+    // Optional: Close the modal after a short delay
+    // setTimeout(() => {
+    //   setShowInvoicesModal(false);
+    //   setMessage(''); // Clear message on close
+    // }, 3000); // Close after 3 seconds
+  };
+
   const fetchInvoices = () => {
     axios
       .get("http://localhost:5000/api/get-user-invoices", {
@@ -591,7 +677,6 @@ function Dashboard() {
 `;
   return (
     <>
-
       <style>{dashboardStyles}</style>
 
       <Header />
@@ -1221,7 +1306,20 @@ function Dashboard() {
         </Modal>
         <Modal
           isOpen={showInvoicesModal}
-          onRequestClose={() => setShowInvoicesModal(false)}
+          // Add state reset logic here later in Step 8
+          onRequestClose={() => {
+            console.log(
+              "Closing invoice modal via onRequestClose, resetting payment state."
+            );
+            setShowInvoicesModal(false); // Close the modal visually
+
+            // Reset payment-specific state
+            setSelectedInvoiceForPayment(null);
+            setClientSecret(null);
+
+            // Also clear any lingering messages
+            setMessage("");
+          }}
           style={{
             overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
             content: {
@@ -1232,65 +1330,247 @@ function Dashboard() {
               overflowY: "auto",
               padding: "20px",
               borderRadius: "8px",
+              position: "relative", // Added for absolute positioning of close button
             },
           }}
+          // Add appElement={document.getElementById('root')} or your app's root element ID
+          // to prevent accessibility warnings, if you haven't already configured Modal globally.
         >
           <button
-            onClick={() => setShowInvoicesModal(false)}
+            onClick={() => {
+              console.log("Clicked close button, resetting payment state.");
+              setShowInvoicesModal(false);
+
+              // Reset payment-specific state
+              setSelectedInvoiceForPayment(null);
+              setClientSecret(null);
+              setMessage("");
+            }}
             style={{
-              position: "absolute",
+              position: "absolute", // Changed from fixed/relative to absolute
               top: 10,
               right: 10,
               background: "none",
               border: "none",
               cursor: "pointer",
+              fontSize: "1.5rem", // Made close button slightly larger
+              padding: "5px", // Added padding for easier clicking
             }}
+            aria-label="Close Invoices Modal" // Accessibility improvement
           >
-            Close
+            <X size={20} /> {/* Using Lucide icon */}
           </button>
 
           <h2>Your Invoices</h2>
 
+          {/* Display messages (loading, error, success) */}
+          {message && (
+            <p
+              style={{
+                textAlign: "center",
+                margin: "10px 0",
+                padding: "8px",
+                borderRadius: "4px",
+                backgroundColor:
+                  message.includes("error") ||
+                  message.includes("Failed") ||
+                  message.includes("issue")
+                    ? "#f8d7da"
+                    : "#d1ecf1",
+                color:
+                  message.includes("error") ||
+                  message.includes("Failed") ||
+                  message.includes("issue")
+                    ? "#721c24"
+                    : "#0c5460",
+              }}
+            >
+              {message}
+            </p>
+          )}
+          {/* Check specifically for message existence before rendering */}
+          {message && (
+            <p
+              style={{
+                textAlign: "center",
+                margin: "10px 0",
+                padding: "8px",
+                borderRadius: "4px",
+                backgroundColor:
+                  message.includes("error") || message.includes("Failed")
+                    ? "#f8d7da"
+                    : "#d1ecf1", // Simple color coding
+                color:
+                  message.includes("error") || message.includes("Failed")
+                    ? "#721c24"
+                    : "#0c5460", // Simple color coding
+              }}
+            >
+              {message}
+            </p>
+          )}
+
+          {/* Table Head */}
+
           {invoices.length > 0 ? (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: "15px",
+              }}
+            >
               <thead>
                 <tr
                   style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}
                 >
-                  <th>Invoice #</th>
-                  <th>Vehicle</th>
-                  <th>Total Amount</th>
-                  <th>Status</th>
-                  <th>Issue Date</th>
-                  <th>Due Date</th>
+                  <th style={{ padding: "8px" }}>Invoice #</th>
+                  <th style={{ padding: "8px" }}>Vehicle</th>
+                  <th style={{ padding: "8px" }}>Total Amount</th>
+                  <th style={{ padding: "8px" }}>Status</th>
+                  <th style={{ padding: "8px" }}>Issue Date</th>
+                  <th style={{ padding: "8px" }}>Due Date</th>
+                  <th style={{ padding: "8px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
-                  <tr
-                    key={inv.invoice_id}
-                    style={{ borderBottom: "1px solid #eee" }}
-                  >
-                    <td>{inv.invoice_number}</td>
-                    <td>
-                      {inv.make
-                        ? `${inv.make} ${inv.model} (${inv.year})`
-                        : "N/A"}
-                    </td>
-                    <td>${inv.total_amount}</td>
-                    <td>{inv.status}</td>
-                    <td>{new Date(inv.issue_date).toLocaleDateString()}</td>
-                    <td>
-                      {inv.due_date
-                        ? new Date(inv.due_date).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                  </tr>
-                ))}
+                {invoices.map((inv) => {
+                  // Use curly braces {} to allow statements before return
+
+                  // --- Corrected Debugging Log Placement ---
+                  // Log details for comparison during render cycle
+                  const isSelected =
+                    selectedInvoiceForPayment === inv.invoice_id;
+                  const secretExists = !!clientSecret; // Convert clientSecret to boolean
+                  const shouldShowForm = isSelected && secretExists;
+
+                  // Log unconditionally first to see all rows, then filter if needed
+                  console.log(
+                    `[Render Check inv ${inv.invoice_id}]`,
+                    `inv.invoice_id (${typeof inv.invoice_id}):`,
+                    inv.invoice_id,
+                    `selectedInvoiceForPayment (${typeof selectedInvoiceForPayment}):`,
+                    selectedInvoiceForPayment,
+                    `clientSecret exists:`,
+                    secretExists,
+                    `Comparison (===):`,
+                    isSelected, // Log the comparison result
+                    `Should Show Form:`,
+                    shouldShowForm
+                  );
+                  // --- End Debugging Log ---
+
+                  // Now, return the JSX for the table row
+                  return (
+                    <tr
+                      key={inv.invoice_id}
+                      style={{ borderBottom: "1px solid #eee" }}
+                    >
+                      {/* Existing columns for Invoice #, Vehicle, Amount, Status, Dates... */}
+                      <td style={{ padding: "8px" }}>{inv.invoice_number}</td>
+                      <td style={{ padding: "8px" }}>
+                        {inv.make
+                          ? `${inv.make} ${inv.model} (${inv.year})`
+                          : "N/A"}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        ${parseFloat(inv.total_amount).toFixed(2)}
+                      </td>
+                      <td
+                        style={{ padding: "8px", textTransform: "capitalize" }}
+                      >
+                        {inv.status}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {new Date(inv.issue_date).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {inv.due_date
+                          ? new Date(inv.due_date).toLocaleDateString()
+                          : "N/A"}
+                      </td>
+
+                      {/* Action Column Cell */}
+                      <td
+                        style={{
+                          padding: "8px",
+                          textAlign: "center",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {/* --- Conditional Rendering uses the calculated 'shouldShowForm' --- */}
+                        {shouldShowForm ? ( // Use the variable for clarity
+                          <Elements
+                            stripe={stripePromise}
+                            options={{ clientSecret }}
+                          >
+                            <div
+                              style={{
+                                border: "1px solid #eee",
+                                padding: "15px",
+                                marginTop: "10px",
+                                borderRadius: "5px",
+                                backgroundColor: "#f9f9f9",
+                                minHeight: "450px", // Ensures there’s space for the PaymentElement
+                              }}
+                            >
+                              <CheckoutForm
+                                onPaymentSuccess={handlePaymentSuccess}
+                              />
+                            </div>
+                          </Elements>
+                        ) : /* --- Otherwise, render the Button or Status Display --- */
+                        inv.status.toLowerCase() === "unpaid" ||
+                          inv.status.toLowerCase() === "due" ? (
+                          <button
+                            onClick={() => handlePayInvoice(inv.invoice_id)}
+                            style={{
+                              padding: "5px 10px",
+                              cursor: "pointer",
+                              backgroundColor: "#ffc107" /* Yellow */,
+                              border: "none",
+                              borderRadius: "4px",
+                              color: "#333",
+                              fontWeight: "bold",
+                              fontSize: "0.85em",
+                            }}
+                            disabled={message === "Preparing payment..."}
+                          >
+                            Pay Now
+                          </button>
+                        ) : inv.status.toLowerCase() === "paid" ? (
+                          <span
+                            style={{
+                              color: "green",
+                              fontWeight: "bold",
+                              fontSize: "0.9em",
+                            }}
+                          >
+                            Paid ✔
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              color: "#6c757d",
+                              fontSize: "0.9em",
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {inv.status}
+                          </span>
+                        )}
+                        {/* --- End Conditional Rendering Logic --- */}
+                      </td>
+                    </tr>
+                  ); // End return statement for the row
+                })}{" "}
+                {/* End invoices.map */}
               </tbody>
             </table>
           ) : (
-            <p>You have no invoices at the moment.</p>
+            <p style={{ textAlign: "center", marginTop: "20px" }}>
+              You have no invoices at the moment.
+            </p>
           )}
         </Modal>
       </main>
