@@ -8,8 +8,11 @@ import Footer from "./Footer";
 import ContentLoader from "react-content-loader"; // For animated skeletons
 import Modal from "react-modal";
 import { Copy, Trash2, X } from "lucide-react";
+// imports for stripe
 import { loadStripe } from "@stripe/stripe-js";
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "./CheckoutForm";
 
 // debugging making sure key is loaded
 if (!stripePublicKey) {
@@ -408,7 +411,7 @@ function Dashboard() {
     }
   };
 
-  // stripe function
+  // stripe functions
   const handlePayInvoice = async (invoiceId) => {
     console.log(`Attempting to pay invoice ID: ${invoiceId}`); // Log which invoice is being processed
 
@@ -454,6 +457,26 @@ function Dashboard() {
       setSelectedInvoiceForPayment(null); // Reset selected invoice on error
       setClientSecret(null); // Reset client secret on error
     }
+  };
+  // Stripe Sucess
+  const handlePaymentSuccess = (paymentIntentId) => {
+    console.log("Payment successful! Payment Intent ID:", paymentIntentId);
+    setMessage("Payment Successful!"); // Update the main message state
+
+    // Reset the payment-specific state
+    setClientSecret(null);
+    setSelectedInvoiceForPayment(null);
+
+    // Refresh the invoices list to show the updated 'paid' status
+    fetchInvoices();
+
+    // TODO: NEED TO IMPLEMENT PAYMENT STATUS UPDATE IN DB
+
+    // Optional: Close the modal after a short delay
+    // setTimeout(() => {
+    //   setShowInvoicesModal(false);
+    //   setMessage(''); // Clear message on close
+    // }, 3000); // Close after 3 seconds
   };
 
   const fetchInvoices = () => {
@@ -1285,11 +1308,17 @@ function Dashboard() {
           isOpen={showInvoicesModal}
           // Add state reset logic here later in Step 8
           onRequestClose={() => {
-            setShowInvoicesModal(false);
-            // Reset payment state when closing modal (will add in Step 8)
-            // setClientSecret(null);
-            // setSelectedInvoiceForPayment(null);
-            // setMessage('');
+            console.log(
+              "Closing invoice modal via onRequestClose, resetting payment state."
+            );
+            setShowInvoicesModal(false); // Close the modal visually
+
+            // Reset payment-specific state
+            setSelectedInvoiceForPayment(null);
+            setClientSecret(null);
+
+            // Also clear any lingering messages
+            setMessage("");
           }}
           style={{
             overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
@@ -1309,11 +1338,13 @@ function Dashboard() {
         >
           <button
             onClick={() => {
+              console.log("Clicked close button, resetting payment state.");
               setShowInvoicesModal(false);
-              // Reset payment state when closing modal (will add in Step 8)
-              // setClientSecret(null);
-              // setSelectedInvoiceForPayment(null);
-              // setMessage('');
+
+              // Reset payment-specific state
+              setSelectedInvoiceForPayment(null);
+              setClientSecret(null);
+              setMessage("");
             }}
             style={{
               position: "absolute", // Changed from fixed/relative to absolute
@@ -1333,6 +1364,30 @@ function Dashboard() {
           <h2>Your Invoices</h2>
 
           {/* Display messages (loading, error, success) */}
+          {message && (
+            <p
+              style={{
+                textAlign: "center",
+                margin: "10px 0",
+                padding: "8px",
+                borderRadius: "4px",
+                backgroundColor:
+                  message.includes("error") ||
+                  message.includes("Failed") ||
+                  message.includes("issue")
+                    ? "#f8d7da"
+                    : "#d1ecf1",
+                color:
+                  message.includes("error") ||
+                  message.includes("Failed") ||
+                  message.includes("issue")
+                    ? "#721c24"
+                    : "#0c5460",
+              }}
+            >
+              {message}
+            </p>
+          )}
           {/* Check specifically for message existence before rendering */}
           {message && (
             <p
@@ -1354,6 +1409,8 @@ function Dashboard() {
               {message}
             </p>
           )}
+
+          {/* Table Head */}
 
           {invoices.length > 0 ? (
             <table
@@ -1377,107 +1434,137 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
-                  <tr
-                    key={inv.invoice_id}
-                    style={{ borderBottom: "1px solid #eee" }}
-                  >
-                    <td style={{ padding: "8px" }}>{inv.invoice_number}</td>
-                    <td style={{ padding: "8px" }}>
-                      {inv.make
-                        ? `${inv.make} ${inv.model} (${inv.year})`
-                        : "N/A"}
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      ${parseFloat(inv.total_amount).toFixed(2)}
-                    </td>
-                    <td style={{ padding: "8px", textTransform: "capitalize" }}>
-                      {inv.status}
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      {new Date(inv.issue_date).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      {inv.due_date
-                        ? new Date(inv.due_date).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                    <td
-                      style={{
-                        padding: "8px",
-                        textAlign: "center",
-                        verticalAlign: "middle",
-                      }}
+                {invoices.map((inv) => {
+                  // Use curly braces {} to allow statements before return
+
+                  // --- Corrected Debugging Log Placement ---
+                  // Log details for comparison during render cycle
+                  const isSelected =
+                    selectedInvoiceForPayment === inv.invoice_id;
+                  const secretExists = !!clientSecret; // Convert clientSecret to boolean
+                  const shouldShowForm = isSelected && secretExists;
+
+                  // Log unconditionally first to see all rows, then filter if needed
+                  console.log(
+                    `[Render Check inv ${inv.invoice_id}]`,
+                    `inv.invoice_id (${typeof inv.invoice_id}):`,
+                    inv.invoice_id,
+                    `selectedInvoiceForPayment (${typeof selectedInvoiceForPayment}):`,
+                    selectedInvoiceForPayment,
+                    `clientSecret exists:`,
+                    secretExists,
+                    `Comparison (===):`,
+                    isSelected, // Log the comparison result
+                    `Should Show Form:`,
+                    shouldShowForm
+                  );
+                  // --- End Debugging Log ---
+
+                  // Now, return the JSX for the table row
+                  return (
+                    <tr
+                      key={inv.invoice_id}
+                      style={{ borderBottom: "1px solid #eee" }}
                     >
-                      {" "}
-                      {/* Added verticalAlign */}
-                      {/* Conditional Rendering for Action Cell */}
-                      {/* --- Payment Form Area (Will be added in Step 6) --- */}
-                      {/* This section will conditionally render the payment form */}
-                      {/* Check if THIS invoice is selected for payment AND we have a client secret */}
-                      {selectedInvoiceForPayment === inv.invoice_id &&
-                      clientSecret ? (
-                        <div
-                          style={{
-                            border: "1px solid #eee",
-                            padding: "15px",
-                            marginTop: "10px",
-                            borderRadius: "5px",
-                            backgroundColor: "#f9f9f9",
-                          }}
-                        >
-                          {/* We will put the <Elements> wrapper and <CheckoutForm> here in Step 6/7 */}
-                          <p>Loading payment form...</p>
-                        </div> /* --- Button or Status Display Area --- */
-                      ) : // Check for payable statuses
-                      inv.status.toLowerCase() === "unpaid" ||
-                        inv.status.toLowerCase() === "due" ? (
-                        <button
-                          // --- Step 4b: Added onClick Handler ---
-                          onClick={() => handlePayInvoice(inv.invoice_id)}
-                          // --- End of onClick Handler ---
-                          style={{
-                            padding: "5px 10px",
-                            cursor: "pointer",
-                            backgroundColor: "#ffc107" /* Yellow */,
-                            border: "none",
-                            borderRadius: "4px",
-                            color: "#333",
-                            fontWeight: "bold",
-                            fontSize: "0.85em",
-                          }}
-                          // Disable button briefly while preparing payment? (Optional)
-                          // disabled={message === 'Preparing payment...'}
-                        >
-                          Pay Now
-                        </button>
-                      ) : inv.status.toLowerCase() === "paid" ? (
-                        // Display for paid status
-                        <span
-                          style={{
-                            color: "green",
-                            fontWeight: "bold",
-                            fontSize: "0.9em",
-                          }}
-                        >
-                          Paid ✔
-                        </span>
-                      ) : (
-                        // Display for other statuses (void, pending, etc.)
-                        <span
-                          style={{
-                            color: "#6c757d",
-                            fontSize: "0.9em",
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {inv.status}
-                        </span>
-                      )}{" "}
-                      {/* End of Conditional Rendering for Action Cell */}
-                    </td>
-                  </tr>
-                ))}
+                      {/* Existing columns for Invoice #, Vehicle, Amount, Status, Dates... */}
+                      <td style={{ padding: "8px" }}>{inv.invoice_number}</td>
+                      <td style={{ padding: "8px" }}>
+                        {inv.make
+                          ? `${inv.make} ${inv.model} (${inv.year})`
+                          : "N/A"}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        ${parseFloat(inv.total_amount).toFixed(2)}
+                      </td>
+                      <td
+                        style={{ padding: "8px", textTransform: "capitalize" }}
+                      >
+                        {inv.status}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {new Date(inv.issue_date).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {inv.due_date
+                          ? new Date(inv.due_date).toLocaleDateString()
+                          : "N/A"}
+                      </td>
+
+                      {/* Action Column Cell */}
+                      <td
+                        style={{
+                          padding: "8px",
+                          textAlign: "center",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {/* --- Conditional Rendering uses the calculated 'shouldShowForm' --- */}
+                        {shouldShowForm ? ( // Use the variable for clarity
+                          <Elements
+                            stripe={stripePromise}
+                            options={{ clientSecret }}
+                          >
+                            <div
+                              style={{
+                                border: "1px solid #eee",
+                                padding: "15px",
+                                marginTop: "10px",
+                                borderRadius: "5px",
+                                backgroundColor: "#f9f9f9",
+                                minHeight: "450px", // Ensures there’s space for the PaymentElement
+                              }}
+                            >
+                              <CheckoutForm
+                                onPaymentSuccess={handlePaymentSuccess}
+                              />
+                            </div>
+                          </Elements>
+                        ) : /* --- Otherwise, render the Button or Status Display --- */
+                        inv.status.toLowerCase() === "unpaid" ||
+                          inv.status.toLowerCase() === "due" ? (
+                          <button
+                            onClick={() => handlePayInvoice(inv.invoice_id)}
+                            style={{
+                              padding: "5px 10px",
+                              cursor: "pointer",
+                              backgroundColor: "#ffc107" /* Yellow */,
+                              border: "none",
+                              borderRadius: "4px",
+                              color: "#333",
+                              fontWeight: "bold",
+                              fontSize: "0.85em",
+                            }}
+                            disabled={message === "Preparing payment..."}
+                          >
+                            Pay Now
+                          </button>
+                        ) : inv.status.toLowerCase() === "paid" ? (
+                          <span
+                            style={{
+                              color: "green",
+                              fontWeight: "bold",
+                              fontSize: "0.9em",
+                            }}
+                          >
+                            Paid ✔
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              color: "#6c757d",
+                              fontSize: "0.9em",
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {inv.status}
+                          </span>
+                        )}
+                        {/* --- End Conditional Rendering Logic --- */}
+                      </td>
+                    </tr>
+                  ); // End return statement for the row
+                })}{" "}
+                {/* End invoices.map */}
               </tbody>
             </table>
           ) : (
