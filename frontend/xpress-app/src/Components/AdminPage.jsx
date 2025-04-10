@@ -1,4 +1,4 @@
-// Authors: Joe,Josh, ,
+// Authors: Joe, Josh
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "./Header";
@@ -121,6 +121,19 @@ const adminStyles = `
     background-color: #ffd700;
   }
 
+  .photo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 15px;
+  }
+
+  .photo-grid img {
+    width: 150px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
   @media (max-width: 768px) {
     .admin-actions {
       flex-direction: column;
@@ -144,15 +157,23 @@ function AdminPage() {
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
 
+  // View Photos feature states
+  const [viewPhotosUsers, setViewPhotosUsers] = useState([]);
+  const [selectedPhotoUser, setSelectedPhotoUser] = useState("");
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicle, setSelectedVehicle] = useState("");
+  const [vehiclePhotos, setVehiclePhotos] = useState([]);
+
   const openModal = (modalName) => {
     setActiveModal(modalName);
     setMessage("");
 
-    if (modalName === "sendNotifications") {
+    if (modalName === "sendNotifications" || modalName === "viewPhotos") {
       axios.get("http://localhost:5000/api/get-users", { withCredentials: true })
         .then(res => {
           if (res.data.status === "success") {
             setUsers(res.data.users);
+            setViewPhotosUsers(res.data.users);
           }
         })
         .catch(err => console.error("Error fetching users:", err));
@@ -165,6 +186,10 @@ function AdminPage() {
     setSelectedUser("");
     setNotificationTitle("");
     setNotificationMessage("");
+    setSelectedPhotoUser("");
+    setSelectedVehicle("");
+    setVehicles([]);
+    setVehiclePhotos([]);
   };
 
   const handleNotificationSubmit = async (e) => {
@@ -188,6 +213,36 @@ function AdminPage() {
       setMessage("An error occurred.");
     }
   };
+
+  useEffect(() => {
+    if (selectedPhotoUser) {
+      axios.get(`http://localhost:5000/api/get-vehicles/${selectedPhotoUser}`, { withCredentials: true })
+        .then(res => {
+          if (res.data.status === "success") {
+            setVehicles(res.data.vehicles);
+          }
+        })
+        .catch(err => console.error("Error fetching vehicles:", err));
+    } else {
+      setVehicles([]);
+      setSelectedVehicle("");
+      setVehiclePhotos([]);
+    }
+  }, [selectedPhotoUser]);
+
+  useEffect(() => {
+    if (selectedVehicle) {
+      axios.get(`http://localhost:5000/api/get-vehicle-photos/${selectedVehicle}`, { withCredentials: true })
+        .then(res => {
+          if (res.data.status === "success") {
+            setVehiclePhotos(res.data.photos);
+          }
+        })
+        .catch(err => console.error("Error fetching photos:", err));
+    } else {
+      setVehiclePhotos([]);
+    }
+  }, [selectedVehicle]);
 
   return (
     <>
@@ -215,6 +270,66 @@ function AdminPage() {
           </section>
         </div>
       </main>
+
+      {/* View Photos Modal */}
+      <Modal
+        isOpen={activeModal === "viewPhotos"}
+        onRequestClose={closeModal}
+        style={{
+          overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
+          content: {
+            width: "90%",
+            maxWidth: "700px",
+            margin: "auto",
+            padding: "20px",
+            borderRadius: "8px",
+          },
+        }}
+      >
+        <div className="modal-content">
+          <button
+            onClick={closeModal}
+            style={{ float: "right", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <X size={20} />
+          </button>
+          <h2>View Vehicle Photos</h2>
+          <div className="modal-form">
+            <select value={selectedPhotoUser} onChange={(e) => setSelectedPhotoUser(e.target.value)}>
+              <option value="">Select User</option>
+              {viewPhotosUsers.map(user => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.full_name || `${user.first_name} ${user.last_name}`} ({user.email})
+                </option>
+              ))}
+            </select>
+
+            {vehicles.length > 0 && (
+              <select value={selectedVehicle} onChange={(e) => setSelectedVehicle(e.target.value)}>
+                <option value="">Select Vehicle</option>
+                {vehicles.map(v => (
+                  <option key={v.vehicle_id} value={v.vehicle_id}>
+                    {v.make} {v.model} ({v.year})
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <div className="photo-grid">
+              {vehiclePhotos.length > 0 ? (
+                vehiclePhotos.map(photo => (
+                  <div key={photo.media_id}>
+                    <img src={photo.file_url} alt={photo.title} />
+                    <div style={{ fontSize: "0.85rem", textAlign: "center" }}>{photo.title}</div>
+                  </div>
+                ))
+              ) : selectedVehicle && (
+                <p>No photos found for this vehicle.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* Send Notifications Modal */}
       <Modal
@@ -248,7 +363,7 @@ function AdminPage() {
               <option value="">Select User</option>
               {users.map(user => (
                 <option key={user.user_id} value={user.user_id}>
-                  {user.full_name} ({user.email})
+                  {user.full_name || `${user.first_name} ${user.last_name}`} ({user.email})
                 </option>
               ))}
             </select>
