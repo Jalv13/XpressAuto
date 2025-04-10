@@ -1,8 +1,37 @@
-# Environment variables
-.env
-
-# 
+# === Python backend ===
 /backend/venv/
+/backend/__pycache__/
+/backend/*.pyc
+/backend/*.pyo
+/backend/*.pyd
+/backend/.Python
+/backend/env/
+/backend/.env
 
-#
-/backend/__pycache__
+
+# === Node/React frontend ===
+/frontend/xpress-app/node_modules/
+/frontend/xpress-app/dist/
+/frontend/xpress-app/.vite/
+/frontend/xpress-app/.env  
+
+# === Logs, environment, and OS stuff ===
+*.log
+*.env
+.env.*
+
+# === IDE/editor settings ===
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# === General ===
+__pycache__/
+*.bak
+
+
+# === Node === 
+node_modules/
+**/node_modules/
