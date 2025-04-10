@@ -1863,33 +1863,6 @@ def send_sms():
         )
 
 
-# # STRIPE
-# # 1. Stripe setup
-# stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
-
-# # 2. Create payment intent endpoint
-# @app.route('/api/create-payment-intent', methods=['POST'])
-# @login_required
-# def create_payment_intent():
-#     data = request.json
-#     invoice_id = data.get('invoice_id')
-
-#     # Get invoice details from database
-#     # Create payment intent with Stripe
-#     # Return client_secret to frontend
-
-# # 3. Webhook handler
-# @app.route('/api/webhook', methods=['POST'])
-# def stripe_webhook():
-#     # Verify webhook signature
-#     # Process event based on type
-#     # Update database
-
-# # 4. Record payment in database
-# def record_payment(invoice_id, payment_intent):
-#     # Create entry in payments table
-
-
 # APPLICATION ENTRY POINT
 
 if __name__ == "__main__":

@@ -673,6 +673,11 @@ function Dashboard() {
     .vehicle-grid {
       grid-template-columns: 1fr;
     }
+
+    .stripe-payment-container{
+    min-height: 250px;
+    border: 1px dashed red;
+    // debug border}
   }
 `;
   return (
@@ -1511,7 +1516,8 @@ function Dashboard() {
                                 marginTop: "10px",
                                 borderRadius: "5px",
                                 backgroundColor: "#f9f9f9",
-                                minHeight: "450px", // Ensures there’s space for the PaymentElement
+                                minHeight: "250px", // Ensures there’s space for the PaymentElement
+                                minWidth: "30px",
                               }}
                             >
                               <CheckoutForm
