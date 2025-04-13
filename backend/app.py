@@ -1862,6 +1862,37 @@ def send_sms():
             500,
         )
 
+@app.route("/api/get-vehicles/<int:user_id>", methods=["GET"])
+def get_user_vehicles(user_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT vehicle_id, make, model, year FROM vehicles WHERE user_id = %s", (user_id,))
+        vehicles = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "success", "vehicles": vehicles}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/get-vehicle-photos/<int:vehicle_id>", methods=["GET"])
+def get_vehicle_photos(vehicle_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT media_id, file_url, title, description 
+            FROM media 
+            WHERE vehicle_id = %s
+            ORDER BY upload_date DESC
+        """, (vehicle_id,))
+        photos = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "success", "photos": photos}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # APPLICATION ENTRY POINT
 

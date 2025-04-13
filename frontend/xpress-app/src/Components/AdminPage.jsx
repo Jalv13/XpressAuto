@@ -171,6 +171,81 @@ const adminStyles = `
     background-color: #e6b800;
     transform: translateY(-2px);
   }
+
+  .status-message {
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: #f0f8ff;
+    border-radius: 5px;
+  }
+  .modal-content {
+    padding: 20px;
+  }
+  .modal-content h2 {
+    margin-top: 0;
+    text-align: center;
+  }
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  .modal-form input,
+  .modal-form textarea,
+  .modal-form select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .modal-form button {
+    width: 100%;
+    height: 40px;
+    background-color: rgba(255, 204, 0, 0.95);
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .modal-form button:hover {
+    background-color: #ffd700;
+  }
+  .photo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: center;
+  }
+  .photo-grid div {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #444;
+    width: 180px;
+  }
+  .photo-grid img {
+    width: 180px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+  }
+  .photo-grid img:hover {
+    transform: scale(1.05);
+  }
+  .photo-caption {
+    margin-top: 5px;
+    font-weight: 500;
+  }
+  .photo-status {
+    font-size: 0.75rem;
+    color: #777;
+  }
 `;
 
 Modal.setAppElement("#root");
@@ -232,6 +307,12 @@ function AdminPage() {
   const [vehiclesForInvoice, setVehiclesForInvoice] = useState([]);
   const [isLoadingInvoiceNumber, setIsLoadingInvoiceNumber] = useState(false);
 
+  //Selected user for photos
+  const [selectedUserForPhotos, setSelectedUserForPhotos] = useState("");
+  const [vehiclesForPhotos, setVehiclesForPhotos] = useState([]);
+  const [selectedVehicleForPhotos, setSelectedVehicleForPhotos] = useState("");
+  const [vehiclePhotos, setVehiclePhotos] = useState([]);
+
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
@@ -240,7 +321,8 @@ function AdminPage() {
       modalName === "sendNotifications" ||
       modalName === "addLoyaltyPoints" ||
       modalName === "updateVehicleStatus" ||
-      modalName === "sendInvoice"
+      modalName === "sendInvoice" ||
+      modalName === "viewPhotos"
     ) {
       // Fetch users for these modals
       axios
@@ -252,6 +334,7 @@ function AdminPage() {
         })
         .catch((err) => console.error("Error fetching users:", err));
     }
+    
   };
 
   const closeModal = () => {
@@ -510,7 +593,39 @@ function AdminPage() {
   //     vehicle.license_plate.toLowerCase().includes(query)
   //   );
   // });
-
+  
+  // Handler for when an admin selects a user in the view photos modal
+  const handleUserForPhotosChange = (e) => {
+    const userId = e.target.value;
+    setSelectedUserForPhotos(userId);
+    setSelectedVehicleForPhotos("");
+    setVehiclePhotos([]);
+    axios.get(`http://localhost:5000/api/get-vehicles/${userId}`, { withCredentials: true })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setVehiclesForPhotos(res.data.vehicles);
+        }
+      });
+  };
+  // Handler for when an admin selects a vehicle in the view photos modal
+  const handleVehicleForPhotosChange = (e) => {
+    const vehicleId = e.target.value;
+    setSelectedVehicleForPhotos(vehicleId);
+    axios
+      .get(`http://localhost:5000/api/get-vehicle-photos/${vehicleId}`, {
+        withCredentials: true,
+      })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setVehiclePhotos(
+            res.data.photos.map((photo) => ({
+              ...photo,
+              status: res.data.vehicle_status, // assuming backend sends this
+            }))
+          );
+        }
+      });
+  };
   return (
     <>
       <style>{adminStyles}</style>
@@ -905,6 +1020,57 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
+      <Modal isOpen={activeModal === "viewPhotos"} onRequestClose={closeModal}>
+  <div className="modal-content">
+    <div className="modal-header">
+      <h2>View Vehicle Photos</h2>
+      <button
+        onClick={closeModal}
+        style={{ background: "none", border: "none", cursor: "pointer" }}
+      >
+        <X size={20} />
+      </button>
+    </div>
+
+    <form className="modal-form">
+      <select
+        value={selectedUserForPhotos}
+        onChange={handleUserForPhotosChange}
+        required
+      >
+        <option value="">Select User</option>
+        {users.map((user) => (
+          <option key={user.user_id} value={user.user_id}>
+            {user.full_name} ({user.email})
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={selectedVehicleForPhotos}
+        onChange={handleVehicleForPhotosChange}
+        disabled={!selectedUserForPhotos}
+      >
+        <option value="">Select Vehicle</option>
+        {vehiclesForPhotos.map((v) => (
+          <option key={v.vehicle_id} value={v.vehicle_id}>
+            {v.make} {v.model} ({v.year})
+          </option>
+        ))}
+      </select>
+    </form>
+
+    <div className="photo-grid">
+      {vehiclePhotos.map((photo) => (
+         <div key={photo.media_id}>
+         <img src={photo.file_url} alt={photo.title} />
+         <div className="photo-caption">{photo.title}</div>
+         <div className="photo-status">Status: {photo.status || "Unknown"}</div>
+       </div>
+      ))}
+    </div>
+  </div>
+</Modal>
       <Footer />
     </>
   );
