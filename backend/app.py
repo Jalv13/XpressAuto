@@ -1771,6 +1771,22 @@ def contact():
     app.config["MAIL_USE_TLS"] = True
     app.config["MAIL_USE_SSL"] = False
     mail = Mail(app)
+
+    data = request.json
+    captcha_token = data.get("captchaToken")
+
+    # Verify with hCaptcha API
+    verification_data = {
+        
+        "response": captcha_token
+    }
+    
+    response = requests.post("https://api.hcaptcha.com/siteverify", data=verification_data)
+    result = response.json()
+    
+    if not captcha_token:
+        return jsonify({"error": "Captcha verification failed"}), 400
+
     try:
         # Get form data from request
         data = request.json
