@@ -1777,7 +1777,7 @@ def contact():
 
     # Verify with hCaptcha API
     verification_data = {
-        "secret": os.getenv("HCAPTCHA_SECRET_KEY"),
+        "secret": os.environ.get("HCAPTCHA_SECRET_KEY"),
         "response": captcha_token,
         "sitekey": "939e59b0-e52e-48d0-a2a2-0aa4d41a5cde",
     }
@@ -1787,6 +1787,9 @@ def contact():
     
     
     
+    # Check if verification was successful
+    if not result.get("success", False):
+        return jsonify({"error": "Captcha verification failed"}), 400
 
     try:
         # Get form data from request
