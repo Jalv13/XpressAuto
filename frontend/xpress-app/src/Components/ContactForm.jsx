@@ -319,7 +319,7 @@ function ContactForm() {
             {/* Add hCaptcha Component */}
             <div className={`form-group ${!validation.captcha ? "has-error" : ""}`}>
               <HCaptcha
-                sitekey="YOUR_HCAPTCHA_SITE_KEY" // Replace with your actual site key
+                sitekey="939e59b0-e52e-48d0-a2a2-0aa4d41a5cde" // Replace with your actual site key
                 onVerify={handleVerificationSuccess}
                 ref={captchaRef}
               />
