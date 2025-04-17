@@ -23,6 +23,7 @@ function ContactForm() {
     email: "",
     subject: "",
     message: "",
+    website: "",
   });
   
   // Add a ref for the hCaptcha component
@@ -99,6 +100,19 @@ function ContactForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (formData.website) {
+      // Silently reject the submission without alerting the bot
+      //console.log("Honeypot detected possible spam submission");  uncomment this line to test honeypot and have it viewable in inspector.
+      setStatus({
+        submitted: true,
+        submitting: false,
+        info: {
+          error: false,
+          msg: "Thank you! Your message has been sent successfully.",
+        },
+      });
+      return;
+    }
     // Validate form
     const nameValid = formData.name.trim() !== "";
     const emailValid = validateEmail(formData.email);
@@ -314,6 +328,18 @@ function ContactForm() {
               {!validation.message && (
                 <span className="error-text">Please enter your message</span>
               )}
+            </div>
+            <div className="honeypot-field">
+            <label htmlFor="website">Website</label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              value={formData.website}
+              onChange={handleChange}
+              tabIndex="-1"
+              autoComplete="off"
+            />
             </div>
 
             {/* Add hCaptcha Component */}

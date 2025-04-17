@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@hcaptcha/react-hcaptcha": "^1.12.0",
     "lucide-react": "^0.483.0",
     "react-content-loader": "^7.0.2",
     "react-modal": "^3.16.3"
