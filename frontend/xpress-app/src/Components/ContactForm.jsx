@@ -329,7 +329,7 @@ function ContactForm() {
                 <span className="error-text">Please enter your message</span>
               )}
             </div>
-            <div className="honeypot-field">
+            <div className="website-field">
             <label htmlFor="website">Website</label>
             <input
               type="text"

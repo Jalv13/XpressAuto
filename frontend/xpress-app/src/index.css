@@ -1415,7 +1415,7 @@ input[type="file"] {
   background-color: #ffcc00;
 }
 
-.honeypot-field {
+.website-field {
   opacity: 0;
   position: absolute;
   top: 0;
