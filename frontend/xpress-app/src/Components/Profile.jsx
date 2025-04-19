@@ -3,6 +3,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { authService } from "../Services/authService";
 import Header from "./Header";
 import Footer from "./Footer";
+import "./cssFiles/EditProfile.css"
 
 function Profile() {
   const { user } = useAuth();

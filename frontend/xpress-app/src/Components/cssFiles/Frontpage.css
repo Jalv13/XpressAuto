@@ -1,0 +1,61 @@
+/* TEST */
+
+/*------ Services.jsx pt2--------*/
+
+/* Services.css */
+
+.services {
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .services h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.2rem;
+    color: #333;
+  }
+  
+  .services-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 50px;
+  }
+
+  /* Shrink on press */
+.service-box:active {
+  transform: scale(0.95);
+}
+
+.service-box:hover {
+  animation: yellowGlow 1.5s infinite;
+  background: #ffcc00;
+}
+
+/* Why Us */
+.why-us {
+    text-align: center;
+    padding: 40px;
+    background: #e6e6e6;
+  }
+  
+  .testimonials {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+  }
+  
+  .testimonial {
+    padding: 20px;
+    background: #c0bdb4;
+    border-radius: 10px;
+    font-weight: medium;
+    font-family: cursive;
+    border-color: #ffcc00;
+    border-style: solid;
+    border-width: thin;
+    border-width: 1px;
+  }
+  

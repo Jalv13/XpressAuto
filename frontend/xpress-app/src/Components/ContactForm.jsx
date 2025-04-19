@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from "react";
+// 1. First, install the package:
+// npm install @hcaptcha/react-hcaptcha
+
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Header from "./Header";
 import Footer from "./Footer";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+import "./cssFiles/ContactForm.css"
 import {
   FaUser,
   FaEnvelope,
@@ -11,14 +16,23 @@ import {
   FaTag,
 } from "react-icons/fa";
 import "../index.css";
+
 function ContactForm() {
+  // Add captchaToken to your state
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    subject: "", // Added subject field
+    subject: "",
     message: "",
+    website: "",
   });
-
+  
+  // Add a ref for the hCaptcha component
+  const captchaRef = useRef(null);
+  
+  // Add token to your state
+  const [captchaToken, setCaptchaToken] = useState(null);
+  
   const [status, setStatus] = useState({
     submitted: false,
     submitting: false,
@@ -29,6 +43,7 @@ function ContactForm() {
     name: true,
     email: true,
     message: true,
+    captcha: true, // Add captcha validation state
   });
 
   // Clear success message after 5 seconds
@@ -41,6 +56,11 @@ function ContactForm() {
           submitted: false,
           info: { ...prevState.info, msg: null },
         }));
+        // Reset captcha after successful submission
+        if (captchaRef.current) {
+          captchaRef.current.resetCaptcha();
+        }
+        setCaptchaToken(null);
       }, 5000);
     }
     return () => clearTimeout(timer);
@@ -68,28 +88,57 @@ function ContactForm() {
     }
   };
 
+  // Handle hCaptcha verification
+  const handleVerificationSuccess = (token) => {
+    setCaptchaToken(token);
+    // Clear any previous captcha validation error
+    setValidation((prev) => ({
+      ...prev,
+      captcha: true,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (formData.website) {
+      // Silently reject the submission without alerting the bot
+      //console.log("Honeypot detected possible spam submission"); 
+      setStatus({
+        submitted: true,
+        submitting: false,
+        info: {
+          error: false,
+          msg: "Thank you! Your message has been sent successfully.",
+        },
+      });
+      return;
+    }
     // Validate form
     const nameValid = formData.name.trim() !== "";
     const emailValid = validateEmail(formData.email);
     const messageValid = formData.message.trim() !== "";
+    const captchaValid = !!captchaToken; // Verify captcha token exists
 
     setValidation({
       name: nameValid,
       email: emailValid,
       message: messageValid,
+      captcha: captchaValid,
     });
 
-    if (!nameValid || !emailValid || !messageValid) {
+    if (!nameValid || !emailValid || !messageValid || !captchaValid) {
       return;
     }
 
     setStatus((prevState) => ({ ...prevState, submitting: true }));
 
     try {
-      await axios.post("http://127.0.0.1:5000/api/contact", formData);
+      // Include captcha token in your form submission
+      await axios.post("http://127.0.0.1:5000/api/contact", {
+        ...formData,
+        captchaToken: captchaToken,
+      });
 
       setStatus({
         submitted: true,
@@ -106,6 +155,12 @@ function ContactForm() {
         subject: "",
         message: "",
       });
+      
+      // Reset captcha after successful submission
+      setCaptchaToken(null);
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
     } catch (error) {
       setStatus({
         submitted: false,
@@ -133,6 +188,7 @@ function ContactForm() {
 
       <div className="contact-container">
         <div className="contact-info">
+          {/* Contact Info Content (unchanged) */}
           <h2>Contact Information</h2>
           <div className="info-item">
             <i className="fa-solid fa-location-dot"></i>
@@ -272,6 +328,30 @@ function ContactForm() {
               />
               {!validation.message && (
                 <span className="error-text">Please enter your message</span>
+              )}
+            </div>
+            <div className="website-field">
+            <label htmlFor="website">Website</label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              value={formData.website}
+              onChange={handleChange}
+              tabIndex="-1"
+              autoComplete="off"
+            />
+            </div>
+
+            {/* Add hCaptcha Component */}
+            <div className={`form-group ${!validation.captcha ? "has-error" : ""}`}>
+              <HCaptcha
+                sitekey="939e59b0-e52e-48d0-a2a2-0aa4d41a5cde" // Replace with your actual site key
+                onVerify={handleVerificationSuccess}
+                ref={captchaRef}
+              />
+              {!validation.captcha && (
+                <span className="error-text">Please complete the captcha</span>
               )}
             </div>
 

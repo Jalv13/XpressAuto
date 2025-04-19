@@ -1,0 +1,95 @@
+/* Dashboard styles */
+.dashboard-overview {
+  position: relative; /* Needed for absolute positioning of the status card */
+  display: flex;
+  align-items: center;
+  padding: 20px;
+}
+
+.dashboard-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 5 10px rgb(0, 0, 0);
+  }
+  
+  .dashboard-content {
+    margin: 2rem 0;
+  }
+  
+  .vehicle-status-card .status-orb {
+    width: 10px;
+    height: 10px;
+    background-color: green;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  
+  .dashboard-user-photo img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 5px;
+    object-fit: cover;
+    border: 1px solid #000000;
+  }
+  
+  
+/* Stats Section */
+.dashboard-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+/* Stat Boxes */
+.stat-box {
+  flex: 1;
+  min-width: 250px;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+/* Loyalty Points Styling */
+.loyalty-points p {
+  margin: 0.5rem 0;
+  font-size: 16px;
+}
+
+/* Notifications Section */
+.notifications ul {
+  list-style: none;
+  padding: 0;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.dashboard-container.dark .notification-item {
+  border-bottom: 1px solid #444;
+}
+
+.notification-item button {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.notification-item button:hover {
+  color: #0056b3;
+}
+

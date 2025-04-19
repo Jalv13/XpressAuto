@@ -1,5 +1,8 @@
 //Authors: Joshua, Joe, Michael, , ,
 import { Link } from "react-router-dom"; // Import Link from React Router
+import "./cssFiles/Effects.css"
+import "./cssFiles/AdditionalServices.css"
+import "./cssFiles/Frontpage.css"
 
 function Services() {
   return (

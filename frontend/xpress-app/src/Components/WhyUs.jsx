@@ -1,6 +1,6 @@
 //Authors: Joshua, Joe, , , ,
 
-//DELETE
+//DELETE      //Delete? - Rich
 
 function WhyUs() {
   return (
