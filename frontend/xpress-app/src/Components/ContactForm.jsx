@@ -6,6 +6,7 @@ import axios from "axios";
 import Header from "./Header";
 import Footer from "./Footer";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import "./cssFiles/ContactForm.css"
 import {
   FaUser,
   FaEnvelope,
@@ -102,7 +103,7 @@ function ContactForm() {
 
     if (formData.website) {
       // Silently reject the submission without alerting the bot
-      //console.log("Honeypot detected possible spam submission");  uncomment this line to test honeypot and have it viewable in inspector.
+      //console.log("Honeypot detected possible spam submission"); 
       setStatus({
         submitted: true,
         submitting: false,

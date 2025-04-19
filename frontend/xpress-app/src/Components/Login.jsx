@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext"; // Replace authService with useAuth
 import Header from "./Header";
 import Footer from "./Footer";
+import "./cssFiles/Login.css"
 
 function Login() {
   const [email, setEmail] = useState("");
