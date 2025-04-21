@@ -313,30 +313,65 @@ function AdminPage() {
   const [selectedVehicleForPhotos, setSelectedVehicleForPhotos] = useState("");
   const [vehiclePhotos, setVehiclePhotos] = useState([]);
 
+  //Active Jobs
+  const [activeJobs, setActiveJobs] = useState([]);
+
+  // Assign Job state
+const [assignVehicleId, setAssignVehicleId] = useState("");
+const [assignServiceId, setAssignServiceId] = useState("");
+const [assignVehicles, setAssignVehicles] = useState([]);
+const [services, setServices] = useState([]);
+const [selectedService, setSelectedService] = useState("");
+
+
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
     setMessage("");
+  
     if (
       modalName === "sendNotifications" ||
       modalName === "addLoyaltyPoints" ||
       modalName === "updateVehicleStatus" ||
       modalName === "sendInvoice" ||
-      modalName === "viewPhotos"
+      modalName === "viewPhotos" ||
+      modalName === "assignJob"
     ) {
-      // Fetch users for these modals
-      axios
-        .get("http://localhost:5000/api/get-users", { withCredentials: true })
-        .then((res) => {
+      axios.get("http://localhost:5000/api/get-users", { withCredentials: true })
+        .then(res => {
           if (res.data.status === "success") {
             setUsers(res.data.users);
           }
-        })
-        .catch((err) => console.error("Error fetching users:", err));
+        });
     }
-    
+  
+    // ✅ Step 2: Add this block inside the same function
+    if (modalName === "assignJob") {
+      axios.get("http://localhost:5000/api/get-users", { withCredentials: true })
+        .then(res => {
+          if (res.data.status === "success") setUsers(res.data.users);
+        });
+  
+      axios.get("http://localhost:5000/api/get-services", { withCredentials: true })
+        .then(res => {
+          if (res.data.status === "success") setServices(res.data.services);
+        });
+    }
   };
+  
+  
+  useEffect(() => {
+    axios.get("http://localhost:5000/api/active-jobs", { withCredentials: true })
+      .then((res) => {
+        if (res.data.status === "success") {
+          setActiveJobs(res.data.jobs);
+        }
+      })
+      .catch((err) => console.error("Error fetching active jobs:", err));
+  }, []);
+  
 
+  
   const closeModal = () => {
     setActiveModal(null);
     setMessage("");
@@ -549,6 +584,33 @@ function AdminPage() {
     }
   };
 
+  // Handler for completing a job
+  const handleCompleteJob = async (jobId) => {
+    try {
+      const res = await axios.post(
+        `http://localhost:5000/api/complete-job/${jobId}`,
+        {},
+        { withCredentials: true }
+      );
+      if (res.data.status === "success") {
+        setMessage("Job completed and service history recorded.");
+        // Refresh active jobs
+        const updatedJobs = await axios.get("http://localhost:5000/api/active-jobs", {
+          withCredentials: true,
+        });
+        if (updatedJobs.data.status === "success") {
+          setActiveJobs(updatedJobs.data.jobs);
+        }
+      } else {
+        setMessage("Failed to complete the job.");
+      }
+    } catch (err) {
+      console.error("Error completing job:", err);
+      setMessage("An error occurred while completing the job.");
+    }
+  };
+  
+
   // Handler for when an admin selects a user in the vehicle status modal
   const handleUserChange = (e) => {
     const userId = e.target.value;
@@ -626,6 +688,41 @@ function AdminPage() {
         }
       });
   };
+
+  const handleAssignJobUserChange = (e) => {
+    const userId = e.target.value;
+    setSelectedUser(userId);
+  
+    axios.get(`http://localhost:5000/api/get-vehicles/${userId}`, {
+      withCredentials: true
+    }).then((res) => {
+      if (res.data.status === "success") {
+        setAssignVehicles(res.data.vehicles);
+      }
+    });
+  };
+  
+  const handleAssignJobSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post("http://localhost:5000/api/assign-job", {
+        user_id: selectedUser,
+        vehicle_id: assignVehicleId,
+        service_id: assignServiceId,
+      }, { withCredentials: true });
+  
+      if (res.data.status === "success") {
+        setMessage("Job assigned successfully!");
+        closeModal();
+      } else {
+        setMessage("Failed to assign job.");
+      }
+    } catch (err) {
+      console.error("Assign job error:", err);
+      setMessage("An error occurred while assigning job.");
+    }
+  };
+  
   return (
     <>
       <style>{adminStyles}</style>
@@ -633,33 +730,105 @@ function AdminPage() {
       <main className="admin-container">
         <div className="admin-box">
           <section className="admin-overview">
+          <section style={{ marginBottom: "30px" }}>
+  <h2 style={{ fontSize: "1.5rem", textAlign: "center", marginBottom: "15px" }}>
+    Active Jobs
+  </h2>
+  {activeJobs.length === 0 ? (
+    <p style={{ textAlign: "center" }}>No active jobs at the moment.</p>
+  ) : (
+    <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+      {activeJobs.map((job) => (
+        <div
+          key={job.job_id}
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            padding: "15px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+          }}
+        >
+          <p><strong>User:</strong> {job.full_name} ({job.email})</p>
+          <p><strong>Vehicle:</strong> {job.make} {job.model} ({job.license_plate})</p>
+          <p><strong>Service:</strong> {job.service_name}</p>
+          <p><strong>Started:</strong> {new Date(job.started_at).toLocaleString()}</p>
+          <button
+            style={{
+              marginTop: "10px",
+              padding: "8px 12px",
+              backgroundColor: "#28a745",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+            onClick={() => handleCompleteJob(job.job_id)}
+          >
+            Mark Complete
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
+
             <h1>Admin Panel</h1>
             <p>Control user accounts and manage services.</p>
           </section>
           {message && <div className="status-message">{message}</div>}
           <section className="admin-actions">
             <button onClick={() => openModal("addUser")}>Add User</button>
+            <button onClick={() => openModal("assignJob")}>Assign Job</button>
             <button onClick={() => openModal("addService")}>Add Service</button>
-            <button onClick={() => openModal("addLoyaltyPoints")}>
-              Add Loyalty Points
-            </button>
-            <button onClick={() => openModal("addBankInfo")}>
-              Add Bank Information
-            </button>
-            <button onClick={() => openModal("managePosts")}>
-              Manage Posts
-            </button>
+            <button onClick={() => openModal("addLoyaltyPoints")}>Add Loyalty Points</button>
+            <button onClick={() => openModal("addBankInfo")}>Add Bank Information</button>
+            <button onClick={() => openModal("managePosts")}>Manage Posts</button>
             <button onClick={() => openModal("viewPhotos")}>View Photos</button>
-            <button onClick={() => openModal("updateVehicleStatus")}>
-              Update Vehicle Status
-            </button>
-            <button onClick={() => openModal("sendNotifications")}>
-              Send Notifications
-            </button>
-            <button onClick={() => openModal("sendInvoice")}>
-              Send Invoice
-            </button>
+            <button onClick={() => openModal("updateVehicleStatus")}>Update Vehicle Status</button>
+            <button onClick={() => openModal("sendNotifications")}>Send Notifications</button>
+            <button onClick={() => openModal("sendInvoice")}>Send Invoice</button>
           </section>
+          {activeJobs.length > 0 && (
+  <section className="admin-active-jobs" style={{ marginTop: "40px" }}>
+    <h2 style={{ textAlign: "center" }}>Active Jobs</h2>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
+      {activeJobs.map((job) => (
+        <div
+          key={job.job_id}
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            padding: "15px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            backgroundColor: "#f9f9f9"
+          }}
+        >
+          <p><strong>User:</strong> {job.user_name} ({job.user_email})</p>
+          <p><strong>Vehicle:</strong> {job.vehicle_make} {job.vehicle_model} ({job.vehicle_year})</p>
+          <p><strong>Service:</strong> {job.service_name} - ${job.service_price}</p>
+          <p><strong>Status:</strong> {job.vehicle_status}</p>
+          <button
+            onClick={() => handleCompleteJob(job.job_id)}
+            style={{
+              marginTop: "10px",
+              padding: "8px 16px",
+              borderRadius: "4px",
+              border: "none",
+              backgroundColor: "#28a745",
+              color: "#fff",
+              fontWeight: "bold",
+              cursor: "pointer"
+            }}
+          >
+            Complete
+          </button>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+
         </div>
       </main>
       {/* Send Notifications Modal */}
@@ -1020,6 +1189,68 @@ function AdminPage() {
           </form>
         </div>
       </Modal>
+
+      {/* Assign Job Modal */}
+      <Modal isOpen={activeModal === "assignJob"} onRequestClose={closeModal}>
+  <div className="modal-content">
+    <div className="modal-header">
+      <h2>Assign Job</h2>
+      <button
+        onClick={closeModal}
+        style={{ background: "none", border: "none", cursor: "pointer" }}
+      >
+        <X size={20} />
+      </button>
+    </div>
+
+    <form className="modal-form" onSubmit={handleAssignJobSubmit}>
+      <select
+        value={selectedUser}
+        onChange={(e) => setSelectedUser(e.target.value)}
+        required
+      >
+        <option value="">Select User</option>
+        {users.map((user) => (
+          <option key={user.user_id} value={user.user_id}>
+            {user.full_name} ({user.email})
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={selectedVehicle}
+        onChange={(e) => setSelectedVehicle(e.target.value)}
+        required
+      >
+        <option value="">Select Vehicle</option>
+        {vehicles.map((vehicle) => (
+          <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+            {vehicle.license_plate} - {vehicle.make} {vehicle.model}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={selectedService}
+        onChange={(e) => setSelectedService(e.target.value)}
+        required
+      >
+        <option value="">Select Service</option>
+        {services.map((service) => (
+          <option key={service.service_id} value={service.service_id}>
+            {service.service_name}
+          </option>
+        ))}
+      </select>
+
+      <button type="submit">Assign Job</button>
+    </form>
+  </div>
+</Modal>
+
+
+
+      {/* View Photos Modal */}
       <Modal isOpen={activeModal === "viewPhotos"} onRequestClose={closeModal}>
   <div className="modal-content">
     <div className="modal-header">
@@ -1071,6 +1302,7 @@ function AdminPage() {
     </div>
   </div>
 </Modal>
+
       <Footer />
     </>
   );

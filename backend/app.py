@@ -1893,6 +1893,70 @@ def get_vehicle_photos(vehicle_id):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/active-jobs", methods=["GET"])
+def get_active_jobs():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT j.job_id, j.vehicle_id, j.service_id, u.full_name, u.phone, v.make, v.model, v.year, s.service_name
+            FROM jobs j
+            JOIN users u ON j.user_id = u.user_id
+            JOIN vehicles v ON j.vehicle_id = v.vehicle_id
+            JOIN services s ON j.service_id = s.service_id
+            WHERE j.status = 'active'
+        """)
+        jobs = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"status": "success", "jobs": jobs}), 200
+
+    except Exception as e:
+        print("Error fetching active jobs:", str(e))  # Add this line
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/assign-job", methods=["POST"])
+def assign_job():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    vehicle_id = data.get("vehicle_id")
+    service_id = data.get("service_id")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO jobs (user_id, vehicle_id, service_id)
+            VALUES (%s, %s, %s)
+        """, (user_id, vehicle_id, service_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "success", "message": "Job assigned"}), 201
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/get-services", methods=["GET"])
+def get_services():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT service_id, service_name FROM services")
+        rows = cursor.fetchall()
+        services = [{"service_id": row[0], "service_name": row[1]} for row in rows]
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "success", "services": services}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # APPLICATION ENTRY POINT
 
