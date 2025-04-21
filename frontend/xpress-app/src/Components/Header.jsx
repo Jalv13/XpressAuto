@@ -261,12 +261,6 @@ function Header() {
           <i className="fa-solid fa-search"></i>
         </button> */}
 
-        <a href="tel:6092344566" className="phone-link">
-          <button className="icon-button phone-button" aria-label="Call Us">
-            <FaPhone />
-          </button>
-        </a>
-
         <button
           className="icon-button"
           aria-label="Get Directions"
@@ -275,6 +269,12 @@ function Header() {
         >
           <i className="fa-solid fa-location-dot"></i>
         </button>
+
+        <a href="tel:6092344566" className="phone-link">
+          <button className="icon-button phone-button" aria-label="Call Us">
+            <FaPhone />
+          </button>
+        </a>
 
         {user && (
           <div className="user-avatar">
