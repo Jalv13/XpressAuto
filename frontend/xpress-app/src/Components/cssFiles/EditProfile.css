@@ -1,0 +1,83 @@
+/* Profile Page Styles */
+.profile-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .profile-container h1 {
+    margin-bottom: 1.5rem;
+    color: #333;
+    text-align: center;
+  }
+  
+  .profile-tabs {
+    display: flex;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #ddd;
+  }
+  
+
+/* Container styling for the photo upload section */
+.profile-photo-section {
+  border: 2px dashed #ccc;
+  padding: 20px;
+  text-align: center;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  margin-bottom: 20px;
+}
+
+/* Label styling */
+.profile-photo-section label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10px;
+}
+
+
+
+/* Image styling for the profile photo */
+.profile-photo-preview img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #ddd;
+  transition: border-color 0.3s ease;
+}
+
+/* Hover effect on the profile photo */
+.profile-photo-preview img:hover {
+  border-color: #aaa;
+}
+
+/* Style the file input to be centered */
+input[type="file"] {
+  display: block;
+  margin: 0 auto 15px;
+}
+
+/* Styling for the upload button */
+.upload-photo-button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+/* Hover effect for the upload button */
+.upload-photo-button:hover {
+  background-color: #0056b3;
+}
+
+  /* Styling for the preview container */
+.profile-photo-preview {
+  margin-bottom: 15px;
+}

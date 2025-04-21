@@ -1,0 +1,97 @@
+/* Yellow glow animation */
+@keyframes yellowGlow {
+    0% {
+      box-shadow: 0 0 5px rgba(255, 204, 0, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(255, 204, 0, 0.6);
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(255, 204, 0, 0.3);
+    }
+  }
+
+/* Are these even connected to anything?*/
+/* Bounce effect */
+@keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-6px);
+    }
+    60% {
+      transform: translateY(-3px);
+    }
+  }
+  
+  /* Jiggle/Shake effect */
+  @keyframes jiggle {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    25% {
+      transform: rotate(-7deg);
+    }
+    75% {
+      transform: rotate(7deg);
+    }
+  }
+  
+  /* Pulse effect */
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.15);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  /* Wiggle animation for nav links */
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(-3deg);
+    }
+    75% {
+      transform: rotate(3deg);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  /* Apply bounce effect on hover */
+.header .icons button:hover {
+    background: #7e7c7cac;
+    animation: bounce 0.6s ease;
+  }
+  /* Are these even connected to anything?*/

@@ -1,0 +1,116 @@
+/* Additional Services Styling */
+.additional-services {
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    padding: 30px;
+    margin-top: 30px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid #ffcc00; /* Accent color border */
+  }
+  
+  .additional-services h3 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.8rem;
+    color: #333;
+    position: relative;
+    padding-bottom: 15px;
+  }
+  
+  .additional-services h3::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background-color: #ffcc00;
+    border-radius: 3px;
+  }
+  
+  .additional-services-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+  }
+  
+  /* Card styling instead of buttons */
+  .additional-service-card {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 8px;
+    border-top: 3px solid #e0e0e0;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+  }
+  
+  .additional-service-card:hover {
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    border-top-color: #ffcc00;
+  }
+  
+  .additional-service-card h4 {
+    color: #333;
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  
+  .additional-service-card p {
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Underline effect for service boxes */
+.service-box::after {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    transition: width 0.3s ease;
+  }
+  
+  .service-box:hover::after {
+    width: 60%;
+  }
+
+  /* Service box hover effect (I'm convinced this does nothing) */
+  .service-box:hover {  
+    background: #ffcc00;
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+  }
+
+  /* Link styling (The Boxes for "Our Services") */
+.service-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+  }
+  
+  .service-box {
+    background-color: #ffffff;
+    padding: 25px 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #444;
+    text-align: center;
+  }
+  
+  .service-link:hover .service-box {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    background-color: #f8f8f8;
+  }

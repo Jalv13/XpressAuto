@@ -13,6 +13,7 @@ import { loadStripe } from "@stripe/stripe-js";
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "./CheckoutForm";
+import "./cssFiles/Dashboard.css"
 
 // debugging making sure key is loaded
 if (!stripePublicKey) {
