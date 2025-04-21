@@ -1,51 +1,54 @@
 /* Modern Header Styles */
 .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 5%;
-    background: #ffcc00;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  }
-  
-  .header-scrolled {
-    padding: 10px 5%;
-    background: rgba(255, 204, 0, 0.95);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  }
-  
-  .logo a {
-    text-decoration: none;
-    color: #000;
-    display: flex;
-    align-items: center;
-  }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 5%;
+  background: #ffcc00;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
-  
-  .logo-text {
-    font-size: 26px;
-    font-weight: 700;
-  }
-  
-  .logo-highlight {
-    font-size: 26px;
-    font-weight: 800;
-    color: #333;
-    margin-left: 5px;
-  }
-  
-  .logo-image {
+
+/* adjust if you want some kind of animation on scroll, I changed the header div size to accomidate the dead button deletion */
+/* the above and below css attributes were set as the same so im not sure if you want the animation or not? */
+.header-scrolled {
+  padding: 10px 5%;
+  background: rgba(255, 204, 0, 0.95);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.logo a {
+  text-decoration: none;
+  color: #000;
+  display: flex;
+  align-items: center;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.logo-text {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.logo-highlight {
+  font-size: 26px;
+  font-weight: 800;
+  color: #333;
+  margin-left: 5px;
+}
+
+.logo-image {
   width: 200px; /* Default width for desktop */
   height: auto; /* Maintain aspect ratio */
   transition: all 0.3s ease; /* Smooth transition when size changes */
@@ -69,92 +72,96 @@
   .logo-image {
     width: 110px; /* Smallest size for very small screens */
   }
-  
+
   /* Adjust header padding to accommodate smaller logo */
   .header {
     padding: 10px 4%; /* Reduce padding on very small screens */
   }
 }
-  .header nav {
-    flex-grow: 1;
-    max-width: none;
-    margin: 0px;
-  }
-  
-  .header nav ul {
-    list-style: none;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .header nav ul li {
-    position: relative;
-  }
-  
-  .header nav ul li a,
-  .nav-logout-button {
-    text-decoration: none;
-    color: #333;
-    font-weight: 600;
-    padding: 8px 12px;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    font-size: 16px;
-  }
-  
-  .header nav ul li a:hover,
-  .nav-logout-button:hover {
-    color: #000;
-    background-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-  }
+.header nav {
+  flex-grow: 1;
+  max-width: none;
+  margin: 0px;
+}
+
+.header nav ul {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 0;
+  margin: 0;
+}
+
+.header nav ul li {
+  position: relative;
+}
+
+.header nav ul li a,
+.nav-logout-button {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+.header nav ul li a:hover,
+.nav-logout-button:hover {
+  color: #000;
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Apply bounce effect on hover */
+.header .icons button:hover {
+  background: #7e7c7cac;
+  animation: bounce 0.6s ease;
+}
 
 /* End of Main Header CSS */
 
+/* Header actions A.K.A. the 3 icons in the top right corner */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
+.logo-image {
+  height: 50px; /* Adjust as needed */
+  width: auto; /* Ensures proper scaling */
+}
 
-  /* Header actions A.K.A. the 3 icons in the top right corner */
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  
-  .logo-image {
-    height: 50px; /* Adjust as needed */
-    width: auto; /* Ensures proper scaling */
-  }
-  
-  .icon-button {
-    background: rgba(255, 255, 255, 0.2);
-    color: #333;
-    border: none;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 16px;
-  }
-  
-  .icon-button:hover {
-    background: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-  }
+.icon-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: #333;
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
 
-  /* Modern Header Styles */
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Modern Header Styles */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 5%;
+  padding: 15px 1%;
   background: #ffcc00;
   position: sticky;
   top: 0;
@@ -164,7 +171,7 @@
 }
 
 .header-scrolled {
-  padding: 10px 5%;
+  padding: 15px 1%;
   background: rgba(255, 204, 0, 0.95);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
@@ -178,7 +185,8 @@
   align-items: center;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -236,8 +244,6 @@ html, body {
 
 /* End of Main Header CSS */
 
-
-
 /* Header actions A.K.A. the 3 icons in the top right corner */
 .header-actions {
   display: flex;
@@ -274,184 +280,11 @@ html, body {
 
 /* Hamburger menu styles - hide by default */
 .mobile-menu-toggle {
-display: none; /* Hide by default */
+  display: none; /* Hide by default */
 }
-
-.hamburger {
-display: block;
-position: relative;
-width: 30px;
-height: 24px;
-background: transparent;
-border: none;
-cursor: pointer;
-padding: 0;
-z-index: 1001;
+.phone-button {
+  display: none; /* Hide by default */
 }
-
-.hamburger span {
-display: block;
-position: absolute;
-height: 3px;
-width: 100%;
-background: #333;
-border-radius: 3px;
-opacity: 1;
-left: 0;
-transform: rotate(0deg);
-transition: .25s ease-in-out;
-}
-
-/* Position the three lines */
-.hamburger span:nth-child(1) {
-top: 0px;
-}
-
-.hamburger span:nth-child(2) {
-top: 10px;
-}
-
-.hamburger span:nth-child(3) {
-top: 20px;
-}
-
-/* Hamburger animation */
-.hamburger.active span:nth-child(1) {
-top: 10px;
-transform: rotate(45deg);
-}
-
-.hamburger.active span:nth-child(2) {
-opacity: 0;
-}
-
-.hamburger.active span:nth-child(3) {
-top: 10px;
-transform: rotate(-45deg);
-}
-
-/* Desktop menu styling */
-@media (min-width: 993px) {
-/* Make sure main navigation is visible */
-nav {
-  display: block !important;
-  position: static;
-  width: auto;
-  height: auto;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-}
-
-.main-menu {
-  display: flex;
-  flex-direction: row;
-}
-}
-
-/* Mobile menu styling */
-@media (max-width: 992px) {
-/* Show hamburger in mobile mode */
-.mobile-menu-toggle {
-  display: block;
-}
-
-nav {
-  position: fixed;
-  top: 0;
-  right: -100%;
-  width: 80%;
-  max-width:280px;
-  height: 100vh;
-  background: white;
-  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
-  padding: 80px 20px 20px;
-  transition: all 0.4s ease;
-  z-index: 999;
-  overflow-y: auto;
-}
-
-nav.nav-active {
-  right: ;
-}
-
-.main-menu {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-}
-
-.main-menu li {
-  width: 100%;
-}
-
-.main-menu li a {
-  display: block;
-  padding: 12px 15px;
-  width: 100%;
-}
-
-/* Dropdown styling for mobile */
-.dropdown-menu {
-  position: static;
-  box-shadow: none;
-  width: 100%;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-  transition: max-height 0.3s ease;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 5px;
-}
-
-.dropdown-menu.show {
-  max-height: 300px;
-  padding: 10px 0;
-}
-
-.dropdown-menu a {
-  padding-left: 25px !important;
-}
-
-/* Add overlay for mobile menu */
-.menu-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 998;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-}
-
-.menu-overlay.active {
-  opacity: 1;
-  visibility: visible;
-}
-}
-  
-  /* User avatar */
-  .user-avatar {
-    background: #333;
-    color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    margin-left: 5px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-  /* End of Header Actions*/
-  
 
 .hamburger {
   display: block;
@@ -475,7 +308,7 @@ nav.nav-active {
   opacity: 1;
   left: 0;
   transform: rotate(0deg);
-  transition: .25s ease-in-out;
+  transition: 0.25s ease-in-out;
 }
 
 /* Position the three lines */
@@ -518,7 +351,7 @@ nav.nav-active {
     box-shadow: none;
     padding: 0;
   }
-  
+
   .main-menu {
     display: flex;
     flex-direction: row;
@@ -531,12 +364,13 @@ nav.nav-active {
   .mobile-menu-toggle {
     display: block;
   }
-  
+
   nav {
     position: fixed;
     top: 0;
     right: -100%;
-    width: 280px;
+    width: 80%;
+    max-width: 280px;
     height: 100vh;
     background: white;
     box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
@@ -545,28 +379,28 @@ nav.nav-active {
     z-index: 999;
     overflow-y: auto;
   }
-  
+
   nav.nav-active {
-    right: 0;
+    right: ;
   }
-  
+
   .main-menu {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
     width: 100%;
   }
-  
+
   .main-menu li {
     width: 100%;
   }
-  
+
   .main-menu li a {
     display: block;
     padding: 12px 15px;
     width: 100%;
   }
-  
+
   /* Dropdown styling for mobile */
   .dropdown-menu {
     position: static;
@@ -581,16 +415,16 @@ nav.nav-active {
     background: rgba(0, 0, 0, 0.05);
     border-radius: 5px;
   }
-  
+
   .dropdown-menu.show {
     max-height: 300px;
     padding: 10px 0;
   }
-  
+
   .dropdown-menu a {
     padding-left: 25px !important;
   }
-  
+
   /* Add overlay for mobile menu */
   .menu-overlay {
     position: fixed;
@@ -604,7 +438,184 @@ nav.nav-active {
     visibility: hidden;
     transition: all 0.3s ease;
   }
-  
+
+  .menu-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* User avatar */
+.user-avatar {
+  background: #333;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-left: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+/* End of Header Actions*/
+
+.hamburger {
+  display: block;
+  position: relative;
+  width: 30px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  position: absolute;
+  height: 3px;
+  width: 100%;
+  background: #333;
+  border-radius: 3px;
+  opacity: 1;
+  left: 0;
+  transform: rotate(0deg);
+  transition: 0.25s ease-in-out;
+}
+
+/* Position the three lines */
+.hamburger span:nth-child(1) {
+  top: 0px;
+}
+
+.hamburger span:nth-child(2) {
+  top: 10px;
+}
+
+.hamburger span:nth-child(3) {
+  top: 20px;
+}
+
+/* Hamburger animation */
+.hamburger.active span:nth-child(1) {
+  top: 10px;
+  transform: rotate(45deg);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  top: 10px;
+  transform: rotate(-45deg);
+}
+
+/* Desktop menu styling */
+@media (min-width: 993px) {
+  /* Make sure main navigation is visible */
+  nav {
+    display: block !important;
+    position: static;
+    width: auto;
+    height: auto;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .main-menu {
+    display: flex;
+    flex-direction: row;
+  }
+}
+
+/* Mobile menu styling */
+@media (max-width: 992px) {
+  /* Show hamburger in mobile mode */
+  .mobile-menu-toggle {
+    display: block;
+  }
+  .phone-button {
+    display: block;
+  }
+
+  nav {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    padding: 80px 20px 20px;
+    transition: all 0.4s ease;
+    z-index: 999;
+    overflow-y: auto;
+  }
+
+  nav.nav-active {
+    right: 0;
+  }
+
+  .main-menu {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .main-menu li {
+    width: 100%;
+  }
+
+  .main-menu li a {
+    display: block;
+    padding: 12px 15px;
+    width: 100%;
+  }
+
+  /* Dropdown styling for mobile */
+  .dropdown-menu {
+    position: static;
+    box-shadow: none;
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: max-height 0.3s ease;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 5px;
+  }
+
+  .dropdown-menu.show {
+    max-height: 300px;
+    padding: 10px 0;
+  }
+
+  .dropdown-menu a {
+    padding-left: 25px !important;
+  }
+
+  /* Add overlay for mobile menu */
+  .menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
   .menu-overlay.active {
     opacity: 1;
     visibility: visible;
