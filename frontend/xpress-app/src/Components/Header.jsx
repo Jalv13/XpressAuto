@@ -3,9 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaPhone } from "react-icons/fa";
-import "./cssFiles/DropDownMenu.css";
-import "./cssFiles/Header.css";
-import "./cssFiles/PossibleDeadCSS.css";
+import "./cssFiles/DropDownMenu.css"
+import "./cssFiles/Header.css"
 
 function Header() {
   const { user, logout } = useAuth();
@@ -57,7 +56,7 @@ function Header() {
     const handleClickOutside = (event) => {
       const nav = document.querySelector("nav");
       const mobileToggle = document.querySelector(".mobile-menu-toggle");
-
+      
       if (
         mobileMenuOpen &&
         nav &&
@@ -138,8 +137,8 @@ function Header() {
       <nav className={mobileMenuOpen ? "nav-active" : ""}>
         <ul className="main-menu">
           <li>
-            <Link
-              to="/"
+            <Link 
+              to="/" 
               className={isActive("/") ? "active-link" : ""}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -175,30 +174,10 @@ function Header() {
             <div
               className={`dropdown-menu ${servicesDropdownOpen ? "show" : ""}`}
             >
-              <Link
-                to="/services/oil-change"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Oil Change
-              </Link>
-              <Link
-                to="/services/tire-services"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Tire Service
-              </Link>
-              <Link
-                to="/services/brake-services"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Brake Service
-              </Link>
-              <Link
-                to="/services/diagnostics"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Diagnostics
-              </Link>
+              <Link to="/services/oil-change" onClick={() => setMobileMenuOpen(false)}>Oil Change</Link>
+              <Link to="/services/tire-services" onClick={() => setMobileMenuOpen(false)}>Tire Service</Link>
+              <Link to="/services/brake-services" onClick={() => setMobileMenuOpen(false)}>Brake Service</Link>
+              <Link to="/services/diagnostics" onClick={() => setMobileMenuOpen(false)}>Diagnostics</Link>
             </div>
           </li>
 
@@ -214,20 +193,13 @@ function Header() {
               <div
                 className={`dropdown-menu ${profileDropdownOpen ? "show" : ""}`}
               >
-                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  Dashboard
-                </Link>
-                <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
-                  Edit Profile
-                </Link>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                >
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+                <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>Edit Profile</Link>
+                <a href="#" onClick={(e) => {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  handleLogout();
+                }}>
                   Logout
                 </a>
               </div>
@@ -256,8 +228,18 @@ function Header() {
           )}
         </ul>
       </nav>
-
+      
       <div className="header-actions">
+        <button className="icon-button" aria-label="Search">
+          <i className="fa-solid fa-search"></i>
+        </button>
+        
+        <a href="tel:6092344566" className="phone-link">
+          <button className="icon-button phone-button" aria-label="Call Us">
+            <FaPhone />
+          </button>
+        </a>
+        
         <button
           className="icon-button"
           aria-label="Get Directions"
@@ -266,17 +248,7 @@ function Header() {
         >
           <i className="fa-solid fa-location-dot"></i>
         </button>
-        {/* commented out dead search button */}
-        {/* <button className="icon-button" aria-label="Search">
-          <i className="fa-solid fa-search"></i>
-        </button> */}
-
-        <a href="tel:6092344566" className="phone-link">
-          <button className="icon-button phone-button" aria-label="Call Us">
-            <FaPhone />
-          </button>
-        </a>
-
+        
         {user && (
           <div className="user-avatar">
             {user.profile_picture_url ? (
@@ -297,9 +269,9 @@ function Header() {
             )}
           </div>
         )}
-
-        <div
-          className="mobile-menu-toggle"
+        
+        <div 
+          className="mobile-menu-toggle" 
           onClick={toggleMobileMenu}
           aria-expanded={mobileMenuOpen}
           aria-label="Toggle menu"
