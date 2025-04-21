@@ -13,7 +13,7 @@ import { loadStripe } from "@stripe/stripe-js";
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "./CheckoutForm";
-import "./cssFiles/Dashboard.css"
+import "./cssFiles/Dashboard.css";
 
 // debugging making sure key is loaded
 if (!stripePublicKey) {
@@ -815,6 +815,7 @@ function Dashboard() {
             gap: "20px",
             alignItems: "center",
             marginBottom: "20px",
+            minHeight: "200px",
           }}
         >
           <Link to="/profile" className="dashboard-link">
@@ -1170,15 +1171,32 @@ function Dashboard() {
           isOpen={showPhotosModal}
           onRequestClose={() => setShowPhotosModal(false)}
           style={{
-            overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
+            overlay: {
+              backgroundColor: "rgba(0,0,0,0.6)",
+              zIndex: 1000,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 0,
+              margin: 0,
+              width: "100%",
+              left: 0,
+              right: 0,
+            },
             content: {
-              width: "90%",
-              maxWidth: "800px",
-              margin: "auto",
-              height: "80vh",
+              position: "relative",
+              width: "95%",
+              maxWidth: "calc(100% - 20px)",
+              margin: "0 auto",
               overflowY: "auto",
               padding: "20px",
               borderRadius: "8px",
+              boxSizing: "border-box",
+              left: 0,
+              right: 0,
+              top: "auto",
+              bottom: "auto",
+              overflow: "visible",
             },
           }}
         >
@@ -1327,16 +1345,32 @@ function Dashboard() {
             setMessage("");
           }}
           style={{
-            overlay: { backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1000 },
+            overlay: {
+              backgroundColor: "rgba(0,0,0,0.6)",
+              zIndex: 1000,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 0,
+              margin: 0,
+              width: "100%",
+              left: 0,
+              right: 0,
+            },
             content: {
-              width: "90%",
-              maxWidth: "800px",
-              margin: "auto",
-              height: "80vh",
+              position: "relative",
+              width: "95%",
+              maxWidth: "calc(100% - 20px)",
+              margin: "0 auto",
               overflowY: "auto",
               padding: "20px",
               borderRadius: "8px",
-              position: "relative", // Added for absolute positioning of close button
+              boxSizing: "border-box",
+              left: 0,
+              right: 0,
+              top: "auto",
+              bottom: "auto",
+              overflow: "visible",
             },
           }}
           // Add appElement={document.getElementById('root')} or your app's root element ID

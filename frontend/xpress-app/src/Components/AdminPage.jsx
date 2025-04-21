@@ -5,6 +5,7 @@ import Footer from "./Footer";
 import Modal from "react-modal";
 import { X } from "lucide-react";
 import axios from "axios";
+import "./cssFiles/PossibleDeadCSS.css";
 
 // Combined admin styles with modal-specific styles appended
 const adminStyles = `
@@ -19,7 +20,7 @@ const adminStyles = `
   }
   .admin-box {
     width: 100%;
-    max-width: 1000px;
+    max-width: calc(100% - 20px);
     background-color: white;
     padding: 30px;
     border-radius: 16px;
@@ -114,11 +115,11 @@ const adminStyles = `
     background-color: rgba(0, 0, 0, 0.6) !important;
     z-index: 1000;
   }
-  .ReactModal__Content {
+  .ReactModal_Content {
     position: relative;
     margin: auto;
     width: 90%;
-    max-width: 500px;
+    max-width: calc(100% - 20px)
     padding: 20px;
     border-radius: 8px;
     background-color: #fff;
@@ -180,7 +181,7 @@ const adminStyles = `
     border-radius: 5px;
   }
   .modal-content {
-    padding: 20px;
+    padding: 10px;
   }
   .modal-content h2 {
     margin-top: 0;
@@ -334,7 +335,6 @@ function AdminPage() {
         })
         .catch((err) => console.error("Error fetching users:", err));
     }
-    
   };
 
   const closeModal = () => {
@@ -593,14 +593,17 @@ function AdminPage() {
   //     vehicle.license_plate.toLowerCase().includes(query)
   //   );
   // });
-  
+
   // Handler for when an admin selects a user in the view photos modal
   const handleUserForPhotosChange = (e) => {
     const userId = e.target.value;
     setSelectedUserForPhotos(userId);
     setSelectedVehicleForPhotos("");
     setVehiclePhotos([]);
-    axios.get(`http://localhost:5000/api/get-vehicles/${userId}`, { withCredentials: true })
+    axios
+      .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
+        withCredentials: true,
+      })
       .then((res) => {
         if (res.data.status === "success") {
           setVehiclesForPhotos(res.data.vehicles);
@@ -1021,56 +1024,58 @@ function AdminPage() {
         </div>
       </Modal>
       <Modal isOpen={activeModal === "viewPhotos"} onRequestClose={closeModal}>
-  <div className="modal-content">
-    <div className="modal-header">
-      <h2>View Vehicle Photos</h2>
-      <button
-        onClick={closeModal}
-        style={{ background: "none", border: "none", cursor: "pointer" }}
-      >
-        <X size={20} />
-      </button>
-    </div>
+        <div className="modal-content">
+          <div className="modal-header">
+            <h2>View Vehicle Photos</h2>
+            <button
+              onClick={closeModal}
+              style={{ background: "none", border: "none", cursor: "pointer" }}
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-    <form className="modal-form">
-      <select
-        value={selectedUserForPhotos}
-        onChange={handleUserForPhotosChange}
-        required
-      >
-        <option value="">Select User</option>
-        {users.map((user) => (
-          <option key={user.user_id} value={user.user_id}>
-            {user.full_name} ({user.email})
-          </option>
-        ))}
-      </select>
+          <form className="modal-form">
+            <select
+              value={selectedUserForPhotos}
+              onChange={handleUserForPhotosChange}
+              required
+            >
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.full_name} ({user.email})
+                </option>
+              ))}
+            </select>
 
-      <select
-        value={selectedVehicleForPhotos}
-        onChange={handleVehicleForPhotosChange}
-        disabled={!selectedUserForPhotos}
-      >
-        <option value="">Select Vehicle</option>
-        {vehiclesForPhotos.map((v) => (
-          <option key={v.vehicle_id} value={v.vehicle_id}>
-            {v.make} {v.model} ({v.year})
-          </option>
-        ))}
-      </select>
-    </form>
+            <select
+              value={selectedVehicleForPhotos}
+              onChange={handleVehicleForPhotosChange}
+              disabled={!selectedUserForPhotos}
+            >
+              <option value="">Select Vehicle</option>
+              {vehiclesForPhotos.map((v) => (
+                <option key={v.vehicle_id} value={v.vehicle_id}>
+                  {v.make} {v.model} ({v.year})
+                </option>
+              ))}
+            </select>
+          </form>
 
-    <div className="photo-grid">
-      {vehiclePhotos.map((photo) => (
-         <div key={photo.media_id}>
-         <img src={photo.file_url} alt={photo.title} />
-         <div className="photo-caption">{photo.title}</div>
-         <div className="photo-status">Status: {photo.status || "Unknown"}</div>
-       </div>
-      ))}
-    </div>
-  </div>
-</Modal>
+          <div className="photo-grid">
+            {vehiclePhotos.map((photo) => (
+              <div key={photo.media_id}>
+                <img src={photo.file_url} alt={photo.title} />
+                <div className="photo-caption">{photo.title}</div>
+                <div className="photo-status">
+                  Status: {photo.status || "Unknown"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
       <Footer />
     </>
   );
