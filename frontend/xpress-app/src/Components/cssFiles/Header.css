@@ -12,8 +12,8 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* adjust if you want some kind of animation on scroll, I changed the header div size to accomidate the dead button deletion */
-/* the above and below css attributes were set as the same so im not sure if you want the animation or not? */
+/* adjust if you want some kind of animation on scroll, I changed the header div size to accommodate the dead button deletion */
+/* the above and below css attributes were set as the same so im not sure if you want the animation or */
 .header-scrolled {
   padding: 10px 5%;
   background: rgba(255, 204, 0, 0.95);
@@ -381,7 +381,7 @@ body {
   }
 
   nav.nav-active {
-    right: ;
+    right: 0;
   }
 
   .main-menu {
