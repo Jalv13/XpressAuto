@@ -33,6 +33,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import stripe
 from decimal import Decimal
+from functools import wraps
 
 load_dotenv()
 
@@ -106,12 +107,27 @@ def get_db_connection():
 # USER MODEL
 
 
+# Custom Decorator for Admin Users
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.isAdmin:
+            return (
+                jsonify({"status": "error", "message": "Admin access required"}),
+                403,
+            )  # Forbidden
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 class User(UserMixin):
     """User model for authentication purposes"""
 
-    def __init__(self, user_id, email):
+    def __init__(self, user_id, email, isAdmin=False):
         self.id = user_id
         self.email = email
+        self.isAdmin = isAdmin
 
 
 @login_manager.user_loader
@@ -119,13 +135,15 @@ def load_user(user_id):
     """Loads a user from the database based on user_id"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT user_id, email FROM users WHERE user_id = %s", (user_id,))
+    cursor.execute(
+        "SELECT user_id, email,  is_admin FROM users WHERE user_id = %s", (user_id,)
+    )
     user_data = cursor.fetchone()
     cursor.close()
     conn.close()
 
     if user_data:
-        return User(user_data["user_id"], user_data["email"])
+        return User(user_data["user_id"], user_data["email"], user_data["is_admin"])
     return None
 
 
@@ -218,14 +236,18 @@ def get_user():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # Fetch is_admin along with other details
         cursor.execute(
-            "SELECT first_name, last_name, profile_picture_url FROM users WHERE user_id = %s",
+            "SELECT first_name, last_name, profile_picture_url, is_admin FROM users WHERE user_id = %s",
             (current_user.id,),
         )
         user_details = cursor.fetchone() or {}
         first_name = user_details.get("first_name", "")
         last_name = user_details.get("last_name", "")
         profile_photo = user_details.get("profile_picture_url", "")
+        # Get the is_admin status from the database fetch
+        is_admin = user_details.get("is_admin", False)
+
         name = (
             f"{first_name} {last_name}".strip()
             if (first_name or last_name)
@@ -240,6 +262,7 @@ def get_user():
                     "last_name": last_name,
                     "name": name,
                     "profile_picture_url": profile_photo,
+                    "is_admin": is_admin,  # Include is_admin in the response
                 }
             ),
             200,
@@ -305,6 +328,8 @@ def add_user():
 
 
 @app.route("/api/get-users", methods=["GET"])
+@login_required
+@admin_required
 def get_users():
     """Retrieves a list of all users"""
     try:
@@ -366,6 +391,7 @@ def update_profile():
 
 @app.route("/api/delete-user/<int:user_id>", methods=["DELETE"])
 @login_required
+@admin_required
 def delete_user(user_id):
     """Removes a user from the system"""
     conn = get_db_connection()
@@ -398,6 +424,7 @@ def delete_user(user_id):
 
 @app.route("/api/update-vehicle-status/<int:vehicle_id>", methods=["PUT"])
 @login_required
+@admin_required
 def update_vehicle_status(vehicle_id):
     data = request.get_json()
     new_status = data.get("vehicle_status")
@@ -882,6 +909,8 @@ def get_reviews():
 
 
 @app.route("/api/create-invoice", methods=["POST"])
+@login_required
+@admin_required
 def create_invoice():
     data = request.json
     conn = get_db_connection()
@@ -963,7 +992,8 @@ def create_invoice():
 
 # Create Invoice
 @app.route("/api/create-payment-intent", methods=["POST"])
-@login_required  # Ensure user is logged in
+@login_required
+# Ensure user is logged in
 def create_payment_intent():
     conn = None  # Initialize conn to None for finally block safety
     cursor = None  # Initialize cursor to None
@@ -1252,6 +1282,8 @@ def get_notifications():
 
 
 @app.route("/api/send-notification", methods=["POST"])
+@login_required
+@admin_required
 def send_notification():
     data = request.get_json()
     user_id = data.get("user_id")
@@ -1316,66 +1348,6 @@ def mark_notification_read(notification_id):
         conn.close()
 
 
-# SERVICES
-# Add this route to your Flask app.py
-
-
-@app.route("/api/add-service", methods=["POST"])
-# @login_required need to implement admin check
-def add_service():
-    """Adds a new service to the database."""
-    data = request.get_json()
-
-    # Basic validation
-    if (
-        not data
-        or not data.get("service_name")
-        or not data.get("service_description")
-        or not data.get("service_price")
-    ):
-        return (
-            jsonify({"status": "error", "message": "Missing required service fields"}),
-            400,
-        )
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            """
-            INSERT INTO services (name, description, base_price, is_active)
-            VALUES (%s, %s, %s, %s) RETURNING service_id
-            """,
-            (
-                data["service_name"],
-                data["service_description"],
-                data["service_price"],
-                True,  # Default to active, or get from request if needed
-            ),
-        )
-        new_service_id = cursor.fetchone()["service_id"]
-        conn.commit()
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Service added successfully!",
-                    "service_id": new_service_id,
-                }
-            ),
-            201,
-        )
-
-    except Exception as e:
-        conn.rollback()
-        app.logger.error(f"Error adding service: {e}")  # Use app logger
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
 # LOYALTY POINTS
 # # Get user loyalty points
 @app.route("/api/get-loyalty-points", methods=["GET"])
@@ -1405,53 +1377,9 @@ def get_loyalty_points():
 
 
 # Add points
-# @app.route("/api/add-loyalty-points", methods=["POST"])
-# @login_required
-# def add_loyalty_points():
-#     data = request.get_json()
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     try:
-#         cursor.execute(
-#             """
-#             INSERT INTO loyalty_points (user_id, points_balance, total_points_earned, last_updated)
-#             VALUES (%s, %s, %s, NOW())
-#             ON CONFLICT (user_id)
-#             DO UPDATE SET
-#                 points_balance = loyalty_points.points_balance + EXCLUDED.points_balance,
-#                 total_points_earned = loyalty_points.total_points_earned + EXCLUDED.total_points_earned,
-#                 last_updated = NOW()
-#             RETURNING points_balance
-#             """,
-#             (current_user.id, data["points"], data["points"]),
-#         )
-#         updated_points = cursor.fetchone()
-#         if not updated_points:
-#             return jsonify({"status": "error", "message": "Failed to add points"}), 500
-
-#         conn.commit()
-#         return (
-#             jsonify(
-#                 {
-#                     "status": "success",
-#                     "message": "Points added!",
-#                     "points_balance": updated_points["points_balance"],
-#                 }
-#             ),
-#             200,
-#         )
-
-#     except Exception as e:
-#         conn.rollback()
-#         return jsonify({"status": "error", "message": str(e)}), 500
-#     finally:
-#         cursor.close()
-#         conn.close()
-
-
-##DEMO METHOD
 @app.route("/api/add-loyalty-points", methods=["POST"])
+@login_required
+@admin_required
 def add_loyalty_points():
     data = request.get_json()
     conn = get_db_connection()
@@ -1469,7 +1397,7 @@ def add_loyalty_points():
                 last_updated = NOW()
             RETURNING points_balance
             """,
-            (data["user_id"], data["points"], data["points"]),
+            (current_user.id, data["points"], data["points"]),
         )
         updated_points = cursor.fetchone()
         if not updated_points:
@@ -1481,7 +1409,7 @@ def add_loyalty_points():
                 {
                     "status": "success",
                     "message": "Points added!",
-                    "points_balance": updated_points[0],  # Fetch by index
+                    "points_balance": updated_points["points_balance"],
                 }
             ),
             200,
@@ -1781,12 +1709,12 @@ def contact():
         "response": captcha_token,
         "sitekey": "939e59b0-e52e-48d0-a2a2-0aa4d41a5cde",
     }
-    
-    response = requests.post("https://api.hcaptcha.com/siteverify", data=verification_data)
+
+    response = requests.post(
+        "https://api.hcaptcha.com/siteverify", data=verification_data
+    )
     result = response.json()
-    
-    
-    
+
     # Check if verification was successful
     if not result.get("success", False):
         return jsonify({"error": "Captcha verification failed"}), 400
@@ -1834,6 +1762,8 @@ def contact():
 
 
 @app.route("/api/send-sms", methods=["POST"])
+@login_required
+@admin_required
 def send_sms():
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -1882,12 +1812,16 @@ def send_sms():
             500,
         )
 
+
 @app.route("/api/get-vehicles/<int:user_id>", methods=["GET"])
 def get_user_vehicles(user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT vehicle_id, make, model, year FROM vehicles WHERE user_id = %s", (user_id,))
+        cursor.execute(
+            "SELECT vehicle_id, make, model, year FROM vehicles WHERE user_id = %s",
+            (user_id,),
+        )
         vehicles = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -1895,17 +1829,21 @@ def get_user_vehicles(user_id):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 @app.route("/api/get-vehicle-photos/<int:vehicle_id>", methods=["GET"])
 def get_vehicle_photos(vehicle_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT media_id, file_url, title, description 
             FROM media 
             WHERE vehicle_id = %s
             ORDER BY upload_date DESC
-        """, (vehicle_id,))
+        """,
+            (vehicle_id,),
+        )
         photos = cursor.fetchall()
         cursor.close()
         conn.close()
