@@ -323,6 +323,8 @@ const [assignVehicles, setAssignVehicles] = useState([]);
 const [services, setServices] = useState([]);
 const [selectedService, setSelectedService] = useState("");
 
+const [vehicleInvoices, setVehicleInvoices] = useState([]);
+const [invoiceIsActive, setInvoiceIsActive] = useState("true"); // "true" or "false"
 
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
@@ -432,17 +434,22 @@ const [selectedService, setSelectedService] = useState("");
 
   // Add this handler for vehicle selection
   const handleInvoiceVehicleChange = (e) => {
-    setInvoiceVehicleId(e.target.value);
+    const vehicleId = e.target.value;
+    setInvoiceVehicleId(vehicleId);
+  
+    // Fetch filtered invoices for this vehicle
+    axios
+      .get(`http://localhost:5000/api/invoices?vehicle_id=${vehicleId}&is_active=${invoiceIsActive}`, {
+        withCredentials: true,
+      })
+      .then((res) => {
+        setVehicleInvoices(res.data || []);
+      })
+      .catch((err) => {
+        console.error("Error fetching invoices:", err);
+      });
   };
-  //search users in invoice modal
-  const filteredInvoiceUsers = users.filter((user) => {
-    const query = invoiceSearchQuery.toLowerCase();
-    return (
-      user.full_name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      (user.phone && user.phone.toLowerCase().includes(query))
-    );
-  });
+  
 
   const handleNotificationSubmit = async (e) => {
     e.preventDefault();
@@ -1088,6 +1095,26 @@ const [selectedService, setSelectedService] = useState("");
             value={invoiceSearchQuery}
             onChange={(e) => setInvoiceSearchQuery(e.target.value)}
           />
+<select
+  value={invoiceIsActive}
+  onChange={(e) => {
+    setInvoiceIsActive(e.target.value);
+    // Re-fetch invoices for the current vehicle with new filter
+    if (invoiceVehicleId) {
+      axios
+        .get(`http://localhost:5000/api/invoices?vehicle_id=${invoiceVehicleId}&is_active=${e.target.value}`, {
+          withCredentials: true,
+        })
+        .then((res) => setVehicleInvoices(res.data || []))
+        .catch((err) => console.error("Error filtering invoices:", err));
+    }
+  }}
+>
+  <option value="true">Active Invoices</option>
+  <option value="false">Inactive Invoices</option>
+</select>
+
+
           <form className="modal-form" onSubmit={handleSendInvoiceSubmit}>
             {/* User selection dropdown */}
             <select
@@ -1096,11 +1123,20 @@ const [selectedService, setSelectedService] = useState("");
               required
             >
               <option value="">Select User</option>
-              {filteredInvoiceUsers.map((user) => (
-                <option key={user.user_id} value={user.user_id}>
-                  {user.full_name} ({user.email})
-                </option>
-              ))}
+              {users
+                .filter((user) => {
+                  const query = invoiceSearchQuery.toLowerCase();
+                  return (
+                    user.full_name.toLowerCase().includes(query) ||
+                    user.email.toLowerCase().includes(query) ||
+                    (user.phone && user.phone.toLowerCase().includes(query))
+                  );
+                })
+                .map((user) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.full_name} ({user.email})
+                  </option>
+                ))}
             </select>
 
             {/* Vehicle selection dropdown */}
@@ -1187,6 +1223,19 @@ const [selectedService, setSelectedService] = useState("");
             />
             <button type="submit">Send Invoice</button>
           </form>
+          {vehicleInvoices.length > 0 && (
+  <div style={{ marginTop: "20px" }}>
+    <h4>Filtered Invoices</h4>
+    <ul style={{ paddingLeft: "20px" }}>
+      {vehicleInvoices.map((inv) => (
+        <li key={inv.invoice_id}>
+          #{inv.invoice_number} — ${inv.total_amount} — Status: {inv.status}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
         </div>
       </Modal>
 

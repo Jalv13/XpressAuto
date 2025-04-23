@@ -1227,6 +1227,43 @@ def get_user_invoices():
         cursor.close()
         conn.close()
 
+@app.route("/api/invoices", methods=["GET"])
+def get_invoices():
+    vehicle_id = request.args.get("vehicle_id")
+    is_active = request.args.get("is_active")  # 'true' or 'false'
+    is_complete = request.args.get("is_complete")  # optional
+
+    if not vehicle_id:
+        return jsonify({"error": "Missing vehicle_id"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT * FROM invoices
+            WHERE vehicle_id = %s
+        """
+        params = [vehicle_id]
+
+        if is_active is not None:
+            query += " AND is_active = %s"
+            params.append(is_active.lower() == "true")
+
+        if is_complete is not None:
+            query += " AND is_complete = %s"
+            params.append(is_complete.lower() == "true")
+
+        cursor.execute(query, tuple(params))
+        invoices = cursor.fetchall()
+        return jsonify([dict(row) for row in invoices])
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 
 # NOTIFICATIONS
 
