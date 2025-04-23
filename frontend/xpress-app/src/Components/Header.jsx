@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+// Import useAuth to access user and isAdmin status
 import { useAuth } from "./contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaPhone } from "react-icons/fa";
@@ -7,7 +8,8 @@ import "./cssFiles/DropDownMenu.css";
 import "./cssFiles/Header.css";
 
 function Header() {
-  const { user, logout } = useAuth();
+  // Get user and isAdmin status from the context
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -61,6 +63,7 @@ function Header() {
         mobileMenuOpen &&
         nav &&
         !nav.contains(event.target) &&
+        mobileToggle && // Check if mobileToggle exists before accessing contains
         !mobileToggle.contains(event.target)
       ) {
         setMobileMenuOpen(false);
@@ -78,6 +81,8 @@ function Header() {
 
   // Check if a link is active
   const isActive = (path) => {
+    // Consider making admin active if on dashboard too for admins? Optional.
+    // if (isAdmin && path === '/dashboard' && location.pathname === '/admin') return true;
     return location.pathname === path;
   };
 
@@ -116,11 +121,19 @@ function Header() {
         address
       )}&ll=${latitude},${longitude}&dirflg=d`;
     } else {
-      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&destination_place_id=ChIJA8e8LmfulIkRI7Ig6viyRoY&travelmode=driving`;
+      // Updated Google Maps URL for better compatibility
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        address
+      )}`;
     }
 
     window.open(mapsUrl, "_blank");
   };
+
+  // Determine the correct dashboard path based on admin status
+  const dashboardPath = isAdmin ? "/admin" : "/dashboard";
+  // Determine the text for the link
+  const dashboardText = isAdmin ? "Admin Panel" : "Dashboard";
 
   return (
     <header className={`header ${scrolled ? "header-scrolled" : ""}`}>
@@ -166,33 +179,42 @@ function Header() {
           <li className="dropdown">
             <a
               href="#"
-              className={servicesDropdownOpen ? "dropdown-active" : ""}
+              className={`dropdown-toggle ${
+                servicesDropdownOpen ? "dropdown-active" : ""
+              }`}
               onClick={toggleServicesDropdown}
+              aria-haspopup="true"
+              aria-expanded={servicesDropdownOpen}
             >
               Services <span className="dropdown-arrow">▾</span>
             </a>
             <div
               className={`dropdown-menu ${servicesDropdownOpen ? "show" : ""}`}
+              role="menu"
             >
               <Link
+                role="menuitem"
                 to="/services/oil-change"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Oil Change
               </Link>
               <Link
+                role="menuitem"
                 to="/services/tire-services"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Tire Service
               </Link>
               <Link
+                role="menuitem"
                 to="/services/brake-services"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Brake Service
               </Link>
               <Link
+                role="menuitem"
                 to="/services/diagnostics"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -205,21 +227,42 @@ function Header() {
             <li className="dropdown">
               <a
                 href="#"
-                className={profileDropdownOpen ? "dropdown-active" : ""}
+                className={`dropdown-toggle ${
+                  profileDropdownOpen ? "dropdown-active" : ""
+                }`}
                 onClick={toggleProfileDropdown}
+                aria-haspopup="true"
+                aria-expanded={profileDropdownOpen}
               >
                 Profile <span className="dropdown-arrow">▾</span>
               </a>
               <div
                 className={`dropdown-menu ${profileDropdownOpen ? "show" : ""}`}
+                role="menu"
               >
-                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  Dashboard
+                {/* --- MODIFIED LINK --- */}
+                <Link
+                  role="menuitem"
+                  // Set the 'to' prop based on isAdmin status
+                  to={dashboardPath}
+                  className={isActive(dashboardPath) ? "active-link" : ""}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {/* Display appropriate text */}
+                  {dashboardText}
                 </Link>
-                <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
+                {/* --- END MODIFIED LINK --- */}
+
+                <Link
+                  role="menuitem"
+                  to="/profile"
+                  className={isActive("/profile") ? "active-link" : ""}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Edit Profile
                 </Link>
                 <a
+                  role="menuitem"
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
@@ -277,21 +320,30 @@ function Header() {
         </a>
 
         {user && (
-          <div className="user-avatar">
+          <div className="user-avatar" title={user.name || user.email}>
             {user.profile_picture_url ? (
               <img
                 src={user.profile_picture_url}
-                alt="User Avatar"
+                alt={user.name || "User Avatar"} // Add alt text
                 style={{
                   width: "40px",
                   height: "40px",
                   borderRadius: "50%",
                   objectFit: "cover",
                 }}
+                // Add error handling for broken image links
+                onError={(e) => {
+                  e.target.onerror = null; // Prevent infinite loop if fallback fails
+                  e.target.style.display = "none"; // Hide broken image icon
+                  // Optionally display initials or a default icon here
+                }}
               />
             ) : (
-              <span>
-                {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
+              // Fallback display (e.g., initials)
+              <span className="avatar-initials">
+                {user.name?.charAt(0).toUpperCase() ||
+                  user.email?.charAt(0).toUpperCase() ||
+                  "U"}
               </span>
             )}
           </div>
@@ -301,6 +353,7 @@ function Header() {
           className="mobile-menu-toggle"
           onClick={toggleMobileMenu}
           aria-expanded={mobileMenuOpen}
+          aria-controls="main-menu" // Link toggle to the menu for accessibility
           aria-label="Toggle menu"
         >
           <div className={`hamburger ${mobileMenuOpen ? "active" : ""}`}>
