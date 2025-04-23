@@ -240,7 +240,6 @@ function Header() {
                 className={`dropdown-menu ${profileDropdownOpen ? "show" : ""}`}
                 role="menu"
               >
-                {/* --- MODIFIED LINK --- */}
                 <Link
                   role="menuitem"
                   // Set the 'to' prop based on isAdmin status
@@ -251,7 +250,6 @@ function Header() {
                   {/* Display appropriate text */}
                   {dashboardText}
                 </Link>
-                {/* --- END MODIFIED LINK --- */}
 
                 <Link
                   role="menuitem"
