@@ -33,6 +33,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import stripe
 from decimal import Decimal
+from functools import wraps
 
 load_dotenv()
 
@@ -106,12 +107,27 @@ def get_db_connection():
 # USER MODEL
 
 
+# Custom Decorator for Admin Users
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            return (
+                jsonify({"status": "error", "message": "Admin access required"}),
+                403,
+            )  # Forbidden
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 class User(UserMixin):
     """User model for authentication purposes"""
 
-    def __init__(self, user_id, email):
+    def __init__(self, user_id, email, isAdmin=False):
         self.id = user_id
         self.email = email
+        self.isAdmin = isAdmin
 
 
 @login_manager.user_loader
@@ -119,13 +135,15 @@ def load_user(user_id):
     """Loads a user from the database based on user_id"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT user_id, email FROM users WHERE user_id = %s", (user_id,))
+    cursor.execute(
+        "SELECT user_id, email,  is_admin FROM users WHERE user_id = %s", (user_id,)
+    )
     user_data = cursor.fetchone()
     cursor.close()
     conn.close()
 
     if user_data:
-        return User(user_data["user_id"], user_data["email"])
+        return User(user_data["user_id"], user_data["email"], user_data["is_admin"])
     return None
 
 
@@ -218,14 +236,18 @@ def get_user():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # Fetch is_admin along with other details
         cursor.execute(
-            "SELECT first_name, last_name, profile_picture_url FROM users WHERE user_id = %s",
+            "SELECT first_name, last_name, profile_picture_url, is_admin FROM users WHERE user_id = %s",
             (current_user.id,),
         )
         user_details = cursor.fetchone() or {}
         first_name = user_details.get("first_name", "")
         last_name = user_details.get("last_name", "")
         profile_photo = user_details.get("profile_picture_url", "")
+        # Get the is_admin status from the database fetch
+        is_admin = user_details.get("is_admin", False)
+
         name = (
             f"{first_name} {last_name}".strip()
             if (first_name or last_name)
@@ -240,6 +262,7 @@ def get_user():
                     "last_name": last_name,
                     "name": name,
                     "profile_picture_url": profile_photo,
+                    "is_admin": is_admin,  # Include is_admin in the response
                 }
             ),
             200,
@@ -366,6 +389,7 @@ def update_profile():
 
 @app.route("/api/delete-user/<int:user_id>", methods=["DELETE"])
 @login_required
+@admin_required
 def delete_user(user_id):
     """Removes a user from the system"""
     conn = get_db_connection()
@@ -1781,12 +1805,12 @@ def contact():
         "response": captcha_token,
         "sitekey": "939e59b0-e52e-48d0-a2a2-0aa4d41a5cde",
     }
-    
-    response = requests.post("https://api.hcaptcha.com/siteverify", data=verification_data)
+
+    response = requests.post(
+        "https://api.hcaptcha.com/siteverify", data=verification_data
+    )
     result = response.json()
-    
-    
-    
+
     # Check if verification was successful
     if not result.get("success", False):
         return jsonify({"error": "Captcha verification failed"}), 400
@@ -1882,12 +1906,16 @@ def send_sms():
             500,
         )
 
+
 @app.route("/api/get-vehicles/<int:user_id>", methods=["GET"])
 def get_user_vehicles(user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT vehicle_id, make, model, year FROM vehicles WHERE user_id = %s", (user_id,))
+        cursor.execute(
+            "SELECT vehicle_id, make, model, year FROM vehicles WHERE user_id = %s",
+            (user_id,),
+        )
         vehicles = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -1895,17 +1923,21 @@ def get_user_vehicles(user_id):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 @app.route("/api/get-vehicle-photos/<int:vehicle_id>", methods=["GET"])
 def get_vehicle_photos(vehicle_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT media_id, file_url, title, description 
             FROM media 
             WHERE vehicle_id = %s
             ORDER BY upload_date DESC
-        """, (vehicle_id,))
+        """,
+            (vehicle_id,),
+        )
         photos = cursor.fetchall()
         cursor.close()
         conn.close()
