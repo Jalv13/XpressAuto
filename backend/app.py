@@ -277,6 +277,131 @@ def get_user():
 # API ROUTES - USER MANAGEMENT
 
 
+@app.route("/api/make-admin", methods=["POST"])
+@login_required  # Ensure the requesting user is logged in
+@admin_required  # Ensure the requesting user is an admin
+def make_admin():
+    """
+    Toggles the is_admin status for a specified user.
+    Expects a JSON payload with 'user_id'.
+    """
+    data = request.get_json()
+    target_user_id = data.get("user_id")
+
+    # --- Input Validation ---
+    if not target_user_id:
+        return (
+            jsonify(
+                {"status": "error", "message": "Missing 'user_id' in request body"}
+            ),
+            400,
+        )
+
+    # Prevent admin from accidentally removing their own admin status via this route
+    # Admins should manage their status through direct DB access or a dedicated profile setting
+    if target_user_id == current_user.id:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Cannot change your own admin status via this endpoint.",
+                }
+            ),
+            403,
+        )
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # --- Fetch current admin status ---
+        cursor.execute(
+            "SELECT is_admin FROM users WHERE user_id = %s", (target_user_id,)
+        )
+        user_record = cursor.fetchone()
+
+        if not user_record:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"User with ID {target_user_id} not found",
+                    }
+                ),
+                404,
+            )
+
+        current_status = user_record["is_admin"]
+        new_status = not current_status  # Toggle the boolean value
+
+        # --- Update the user's admin status ---
+        cursor.execute(
+            "UPDATE users SET is_admin = %s WHERE user_id = %s",
+            (new_status, target_user_id),
+        )
+
+        # --- Check if update was successful ---
+        if cursor.rowcount == 0:
+            # Should not happen if fetch succeeded, but good safety check
+            conn.rollback()  # Rollback any potential partial changes
+            return (
+                jsonify(
+                    {"status": "error", "message": "Failed to update user status."}
+                ),
+                500,
+            )
+
+        conn.commit()  # Commit the transaction
+
+        status_message = "promoted to admin" if new_status else "demoted from admin"
+        app.logger.info(
+            f"Admin user {current_user.id} {status_message} user {target_user_id}"
+        )  # Add logging
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"User ID {target_user_id} has been {status_message}.",
+                    "user_id": target_user_id,
+                    "is_admin": new_status,
+                }
+            ),
+            200,
+        )
+
+    except psycopg2.Error as db_error:
+        app.logger.error(
+            f"Database error in make_admin for user {target_user_id}: {db_error}"
+        )
+        if conn:
+            conn.rollback()  # Rollback on database error
+        return jsonify({"status": "error", "message": "Database error occurred."}), 500
+    except Exception as e:
+        app.logger.error(
+            f"Unexpected error in make_admin for user {target_user_id}: {e}"
+        )
+        if conn:
+            conn.rollback()  # Rollback on general error
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"An unexpected error occurred: {str(e)}",
+                }
+            ),
+            500,
+        )
+    finally:
+
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 @app.route("/api/add-user", methods=["POST"])
 def add_user():
     """Creates a new user account"""
@@ -335,7 +460,9 @@ def get_users():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, email, first_name, last_name FROM users;")
+        cursor.execute(
+            "SELECT user_id, email, first_name, last_name, phone FROM users;"
+        )  # Added phone field
         users = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -349,6 +476,7 @@ def get_users():
                     "user_id": u["user_id"],
                     "email": u["email"],
                     "full_name": full_name or u["email"],
+                    "phone": u.get("phone", ""),  # Include phone in the response
                 }
             )
 
@@ -912,64 +1040,122 @@ def get_reviews():
 @login_required
 @admin_required
 def create_invoice():
-    data = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
     try:
-        cursor.execute("SELECT user_id FROM users WHERE email = %s", (data["email"],))
-        user = cursor.fetchone()
-        if not user:
+        data = request.json
+        if not data:
+            raise BadRequest("No JSON data received.")
+    except BadRequest as e:
+        return (
+            jsonify(
+                {"status": "error", "message": f"Invalid request: {e.description}"}
+            ),
+            400,
+        )
+
+    # --- Get required data from payload ---
+    try:
+        user_id = data["user_id"]  # Get user_id directly
+        vehicle_id = data["vehicle_id"]
+        subtotal = data[
+            "subtotal"
+        ]  # Ensure frontend sends this if needed, or calculate it
+        tax_amount = data.get("tax_amount", 0)  # Use .get for optional fields
+        discount_amount = data.get("discount_amount", 0)
+        total_amount = data["total_amount"]
+        status = data["status"]
+        due_date = data["due_date"]
+        notes = data.get("notes", None)  # Use .get for optional fields
+        invoice_items = data.get("items", [])  # Expect items if needed
+    except KeyError as e:
+        # Handle missing required fields
+        return (
+            jsonify({"status": "error", "message": f"Missing required field: {e}"}),
+            400,
+        )
+
+    conn = None  # Initialize conn to None
+    cursor = None  # Initialize cursor to None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # --- Optional: Validate user_id and vehicle_id exist ---
+        cursor.execute("SELECT 1 FROM users WHERE user_id = %s", (user_id,))
+        if not cursor.fetchone():
             return jsonify({"status": "error", "message": "User not found"}), 404
 
-        # Generate a unique invoice number
+        cursor.execute("SELECT 1 FROM vehicles WHERE vehicle_id = %s", (vehicle_id,))
+        if not cursor.fetchone():
+            return jsonify({"status": "error", "message": "Vehicle not found"}), 404
+        # --- End Optional Validation ---
+
+        # --- Generate Invoice Number ---
         current_year = datetime.now().year
         cursor.execute(
             "SELECT COUNT(*) as count FROM invoices WHERE EXTRACT(YEAR FROM issue_date) = %s",
             (current_year,),
         )
-        count = cursor.fetchone()["count"] + 1
+        # Ensure fetchone() didn't return None before accessing 'count'
+        count_result = cursor.fetchone()
+        count = (count_result["count"] + 1) if count_result else 1
         invoice_number = f"INV-{current_year}-{count:04d}"
 
+        # --- Insert Invoice ---
         cursor.execute(
             """
             INSERT INTO invoices (user_id, vehicle_id, invoice_number, subtotal, tax_amount, discount_amount, total_amount, status, due_date, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING invoice_id;
-        """,
+            """,
             (
-                user["user_id"],
-                data["vehicle_id"],
+                user_id,  # Use the user_id from the payload
+                vehicle_id,
                 invoice_number,
-                data["subtotal"],
-                data["tax_amount"],
-                data["discount_amount"],
-                data["total_amount"],
-                data["status"],
-                data["due_date"],
-                data["notes"],
+                subtotal,
+                tax_amount,
+                discount_amount,
+                total_amount,
+                status,
+                due_date,
+                notes,
             ),
         )
+        # Ensure fetchone() didn't return None before accessing 'invoice_id'
+        invoice_result = cursor.fetchone()
+        if not invoice_result:
+            raise Exception(
+                "Failed to insert invoice or retrieve invoice_id."
+            )  # Or a more specific exception
+        invoice_id = invoice_result["invoice_id"]
 
-        invoice_id = cursor.fetchone()["invoice_id"]
+        # --- Insert Invoice Items (if any) ---
+        for item in invoice_items:
+            # Validate item structure before accessing keys
+            required_keys = [
+                "description",
+                "quantity",
+                "unit_price",
+            ]  # Add other required keys like service_id/history_id if mandatory
+            if not all(key in item for key in required_keys):
+                raise ValueError("Missing required key in invoice item.")
 
-        for item in data.get("items", []):
             cursor.execute(
                 """
                 INSERT INTO invoice_items (invoice_id, service_id, history_id, description, quantity, unit_price, discount_amount, total_price)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s);
-            """,
+                """,
                 (
                     invoice_id,
-                    item["service_id"],
-                    item["history_id"],
+                    item.get("service_id"),  # Use .get() if optional
+                    item.get("history_id"),  # Use .get() if optional
                     item["description"],
                     item["quantity"],
                     item["unit_price"],
-                    item["discount_amount"],
-                    item["total_price"],
+                    item.get("discount_amount", 0),  # Use .get() if optional
+                    item.get("total_price"),  # Use .get() if optional or calculate
                 ),
             )
 
+        # --- Commit and Respond ---
         conn.commit()
         return (
             jsonify(
@@ -982,12 +1168,29 @@ def create_invoice():
             201,
         )
 
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+    except (
+        Exception,
+        psycopg2.DatabaseError,
+    ) as e:  # Catch specific DB errors too if using psycopg2
+        if conn:
+            conn.rollback()
+        # Log the detailed error for debugging on the server
+        print(f"Error creating invoice: {e}")  # Or use proper logging
+        # Return a more generic error to the client
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "An internal error occurred while creating the invoice.",
+                }
+            ),
+            500,
+        )
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 # Create Invoice
@@ -1067,6 +1270,158 @@ def create_payment_intent():
         return jsonify(error={"message": "Internal server error"}), 500
     finally:
         # Ensure cursor and connection are closed
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+# mark invoices as paid - CORRECTED VERSION
+@app.route("/api/mark-invoice-paid", methods=["POST"])
+@login_required
+def mark_invoice_paid():
+    """
+    Endpoint called by the frontend immediately after successful
+    client-side Stripe payment confirmation. Marks the invoice as paid.
+    Uses the integer invoice_id (Primary Key).
+    """
+    # Add logging to see received data
+    app.logger.info(f"Received request data for /mark-invoice-paid: {request.data}")
+    received_json = request.get_json()
+    app.logger.info(f"Parsed JSON for /mark-invoice-paid: {received_json}")
+
+    # 1. Get data from the JSON request body
+    data = received_json  # Use the already parsed JSON
+    if not data:
+        app.logger.warning("Mark invoice paid request missing JSON body.")
+        return jsonify({"status": "error", "message": "Missing JSON request body"}), 400
+
+    # --- CHANGE HERE: Expect 'invoice_id' (integer) ---
+    invoice_id = data.get("invoice_id")
+    payment_intent_id = data.get("paymentIntentId")
+
+    # 2. Validate input presence - Check for invoice_id now
+    if not invoice_id or not payment_intent_id:
+        app.logger.warning(
+            f"Mark invoice paid request missing invoice_id ({invoice_id}) or paymentIntentId ({payment_intent_id})."
+        )
+        # Corrected error message to reflect expected keys
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Missing 'invoice_id' or 'paymentIntentId'",
+                }
+            ),
+            400,
+        )
+
+    # 3. Validate/Convert invoice_id type to integer
+    try:
+        invoice_id = int(invoice_id)
+    except (ValueError, TypeError):
+        app.logger.warning(
+            f"Mark invoice paid request received invalid invoice_id type: {invoice_id}"
+        )
+        return (
+            jsonify({"status": "error", "message": "'invoice_id' must be an integer"}),
+            400,
+        )
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()  # Assumes RealDictCursor
+
+        # 4. Verify Ownership & Check Status using integer invoice_id
+        # --- CHANGE HERE: Query by invoice_id ---
+        cursor.execute(
+            """SELECT status FROM invoices
+               WHERE invoice_id = %s AND user_id = %s""",
+            (invoice_id, current_user.id),
+        )
+        invoice_record = cursor.fetchone()
+
+        if not invoice_record:
+            app.logger.warning(
+                f"User {current_user.id} tried to mark non-existent/unauthorized invoice ID {invoice_id} as paid."
+            )
+            # Corrected error message
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Invoice not found or not authorized",
+                    }
+                ),
+                404,
+            )
+
+        current_status = invoice_record.get("status", "").lower()
+
+        if current_status == "paid":
+            app.logger.info(
+                f"Invoice ID {invoice_id} already marked as paid. Client confirmation received for PI: {payment_intent_id}"
+            )
+            return (
+                jsonify(
+                    {"status": "success", "message": "Invoice already marked as paid"}
+                ),
+                200,
+            )
+
+        # 5. Update the Invoice Status using integer invoice_id
+        # --- CHANGE HERE: Update using invoice_id ---
+        cursor.execute(
+            """UPDATE invoices
+               SET status = 'paid'
+               WHERE invoice_id = %s AND user_id = %s AND status != 'paid'""",
+            (invoice_id, current_user.id),
+        )
+
+        if cursor.rowcount == 0:
+            app.logger.info(
+                f"Invoice ID {invoice_id} status update via client had no effect (likely already paid by webhook). PI: {payment_intent_id}"
+            )
+            pass
+
+        # 6. Commit the transaction
+        conn.commit()
+        # Use invoice_id in log
+        app.logger.info(
+            f"Invoice ID {invoice_id} successfully marked as paid by user {current_user.id} via client confirmation. PI: {payment_intent_id}"
+        )
+
+        # 7. Return success response
+        return (
+            jsonify(
+                {"status": "success", "message": "Invoice successfully marked as paid"}
+            ),
+            200,
+        )
+
+    except psycopg2.Error as db_error:
+        # Use invoice_id in log
+        app.logger.error(
+            f"Database error marking invoice ID {invoice_id} paid (Client Confirm - User {current_user.id}): {db_error}"
+        )
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": "Database error occurred."}), 500
+    except Exception as e:
+        app.logger.error(
+            f"Unexpected error marking invoice ID {invoice_id} paid (Client Confirm - User {current_user.id}): {e}"
+        )
+        if conn:
+            conn.rollback()
+        return (
+            jsonify(
+                {"status": "error", "message": "An unexpected server error occurred."}
+            ),
+            500,
+        )
+    finally:
         if cursor:
             cursor.close()
         if conn:
@@ -1850,6 +2205,150 @@ def get_vehicle_photos(vehicle_id):
         return jsonify({"status": "success", "photos": photos}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# Active jobs endpoint
+@app.route("/api/active-jobs", methods=["GET"])
+@login_required
+@admin_required
+def get_active_jobs():
+    """
+    Returns all vehicles marked as Waiting or Active,
+    along with their owner’s info.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+          v.vehicle_id,
+          v.license_plate,
+          v.make,
+          v.model,
+          v.year,
+          u.user_id,
+          u.first_name,
+          u.last_name,
+          u.email
+        FROM vehicles v
+        JOIN users u ON v.user_id = u.user_id
+        WHERE v.vehicle_status IN ('Waiting', 'Active')
+        ORDER BY v.license_plate;
+    """
+    )
+
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    active_jobs = []
+    for r in rows:
+        # Build a display name, falling back to email if no names set
+        full_name = f"{r['first_name']} {r['last_name']}".strip() or r["email"]
+        active_jobs.append(
+            {
+                "vehicle_id": r["vehicle_id"],
+                "license_plate": r["license_plate"],
+                "make": r["make"],
+                "model": r["model"],
+                "year": r["year"],
+                "owner": {
+                    "user_id": r["user_id"],
+                    "full_name": full_name,
+                    "email": r["email"],
+                },
+            }
+        )
+
+    return jsonify({"status": "success", "active_jobs": active_jobs}), 200
+
+
+# Unpaid Invoices Endpoint
+@app.route("/api/get-unpaid-invoices", methods=["GET"])
+@login_required
+@admin_required
+def get_unpaid_invoices():
+    """Retrieves all invoices with 'unpaid' or 'overdue' status, including user details."""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()  # Assumes RealDictCursor
+
+        cursor.execute(
+            """
+            SELECT
+                i.invoice_id,
+                i.invoice_number,
+                i.total_amount,
+                i.status,
+                i.due_date,
+                i.issue_date,
+                u.user_id,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.phone,
+                v.make,
+                v.model,
+                v.year,
+                v.license_plate
+            FROM invoices i
+            JOIN users u ON i.user_id = u.user_id
+            LEFT JOIN vehicles v ON i.vehicle_id = v.vehicle_id  -- Optional: Join vehicle info if needed for context
+            WHERE i.status IN ('unpaid', 'overdue')
+            ORDER BY i.due_date ASC, i.user_id;
+        """
+        )
+        invoices_data = cursor.fetchall()
+
+        # Format data slightly for easier frontend use
+        unpaid_invoices = []
+        for inv in invoices_data:
+            full_name = (
+                f"{inv.get('first_name', '')} {inv.get('last_name', '')}".strip()
+            )
+            vehicle_desc = (
+                f"{inv.get('year', '')} {inv.get('make', '')} {inv.get('model', '')} ({inv.get('license_plate', 'N/A')})".strip()
+                if inv.get("make")
+                else "N/A"
+            )
+            unpaid_invoices.append(
+                {
+                    "invoice_id": inv["invoice_id"],
+                    "invoice_number": inv["invoice_number"],
+                    "total_amount": float(
+                        inv["total_amount"]
+                    ),  # Ensure it's float for display
+                    "status": inv["status"],
+                    "due_date": (
+                        inv["due_date"].isoformat() if inv["due_date"] else None
+                    ),  # Format date
+                    "issue_date": (
+                        inv["issue_date"].isoformat() if inv["issue_date"] else None
+                    ),
+                    "user_id": inv["user_id"],
+                    "user_full_name": full_name or inv["email"],
+                    "user_email": inv["email"],
+                    "user_phone": inv["phone"],  # Crucial for SMS
+                    "vehicle_description": vehicle_desc,
+                }
+            )
+
+        return jsonify({"status": "success", "unpaid_invoices": unpaid_invoices}), 200
+
+    except psycopg2.Error as db_err:
+        app.logger.error(f"Database error fetching unpaid invoices: {db_err}")
+        return jsonify({"status": "error", "message": "Database error occurred."}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error fetching unpaid invoices: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 # APPLICATION ENTRY POINT
