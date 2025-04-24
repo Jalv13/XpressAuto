@@ -48,6 +48,7 @@ function Dashboard() {
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
     useState(null);
   const [clientSecret, setClientSecret] = useState(null);
+  const paidInvoiceId = selectedInvoiceForPayment;
 
   // State for toggling the Add Vehicle form
   const [showAddVehicle, setShowAddVehicle] = useState(false);
@@ -459,24 +460,90 @@ function Dashboard() {
       setClientSecret(null); // Reset client secret on error
     }
   };
-  // Stripe Sucess
-  const handlePaymentSuccess = (paymentIntentId) => {
+  // Stripe Success
+  const handlePaymentSuccess = async (paymentIntentId) => {
+    // <-- Make async
     console.log("Payment successful! Payment Intent ID:", paymentIntentId);
-    setMessage("Payment Successful!"); // Update the main message state
+    setMessage("Payment Successful! Updating status..."); // More specific message
 
-    // Reset the payment-specific state
+    // --- BEGIN MODIFIED/NEW CODE ---
+
+    // Capture the invoice ID *before* resetting the state below
+    const paidInvoiceId = selectedInvoiceForPayment;
+
+    console.log(
+      "Value stored in paidInvoiceId:",
+      paidInvoiceId,
+      "Type:",
+      typeof paidInvoiceId
+    );
+
+    if (!paidInvoiceId) {
+      // This shouldn't happen in normal flow, but good to check
+      console.error(
+        "handlePaymentSuccess Error: Could not determine which invoice was paid."
+      );
+      setMessage(
+        "Payment successful, but couldn't immediately confirm status update. Please refresh if needed."
+      );
+      // Still proceed to reset state and fetch
+    } else {
+      // Try to notify the backend immediately for faster UI update
+      try {
+        console.log(
+          `Sending client-side confirmation to backend for Invoice ID: ${paidInvoiceId}, Payment Intent: ${paymentIntentId}`
+        );
+        // Call the new backend endpoint
+        const response = await axios.post(
+          "http://localhost:5000/api/mark-invoice-paid", // Your new endpoint
+          {
+            invoice_id: paidInvoiceId, // Send the invoice ID
+            paymentIntentId: paymentIntentId, // Send the Stripe Payment Intent ID
+          },
+          { withCredentials: true } // Don't forget credentials for session auth
+        );
+
+        // Log backend response for confirmation
+        if (response.data?.status === "success") {
+          console.log(
+            "Backend acknowledged client-side confirmation and updated status."
+          );
+          setMessage("Payment Successful! Status updated."); // Update message
+        } else {
+          // Backend might respond with success even if already paid, which is okay
+          console.warn(
+            "Backend response to client confirmation:",
+            response.data?.message || "No message"
+          );
+          setMessage("Payment Successful!"); // Keep positive message
+        }
+      } catch (error) {
+        // Log error but don't block the user, webhook is the fallback
+        console.error(
+          "Error sending client-side payment confirmation to backend:",
+          error.response?.data || error.message
+        );
+        // Optionally slightly change the message
+        setMessage("Payment successful! Status will update shortly.");
+      }
+    }
+    // --- END MODIFIED/NEW CODE ---
+
+    // Reset the payment-specific state - **Now safe to do this**
     setClientSecret(null);
-    setSelectedInvoiceForPayment(null);
+    setSelectedInvoiceForPayment(null); // Reset the ID state variable
 
-    // Refresh the invoices list to show the updated 'paid' status
+    // Refresh the invoices list. If the API call above succeeded,
+    // this fetch should immediately show the 'paid' status.
+    // If the API call failed, the webhook will eventually update it,
+    // and a later refresh/fetch would show it.
     fetchInvoices();
-
-    // TODO: NEED TO IMPLEMENT PAYMENT STATUS UPDATE IN DB
 
     // Optional: Close the modal after a short delay
     // setTimeout(() => {
     //   setShowInvoicesModal(false);
-    //   setMessage(''); // Clear message on close
+    //   // Reset message only when closing modal if desired
+    //   // setMessage('');
     // }, 3000); // Close after 3 seconds
   };
 

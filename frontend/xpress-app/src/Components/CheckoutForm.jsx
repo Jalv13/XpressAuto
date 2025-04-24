@@ -68,7 +68,8 @@ function CheckoutForm({ onPaymentSuccess }) {
       console.log("Payment succeeded:", paymentIntent);
       setPaymentMessage("Payment Successful!");
       // Call the success handler passed from the Dashboard component
-      onPaymentSuccess();
+      // *** PASS THE ID HERE ***
+      onPaymentSuccess(paymentIntent.id);
       // No need to set isProcessing(false) here usually, as the UI will likely change
       // due to the parent component's state update triggered by onPaymentSuccess.
     } else if (paymentIntent) {

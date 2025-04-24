@@ -1201,6 +1201,158 @@ def create_payment_intent():
             conn.close()
 
 
+# mark invoices as paid - CORRECTED VERSION
+@app.route("/api/mark-invoice-paid", methods=["POST"])
+@login_required
+def mark_invoice_paid():
+    """
+    Endpoint called by the frontend immediately after successful
+    client-side Stripe payment confirmation. Marks the invoice as paid.
+    Uses the integer invoice_id (Primary Key).
+    """
+    # Add logging to see received data
+    app.logger.info(f"Received request data for /mark-invoice-paid: {request.data}")
+    received_json = request.get_json()
+    app.logger.info(f"Parsed JSON for /mark-invoice-paid: {received_json}")
+
+    # 1. Get data from the JSON request body
+    data = received_json  # Use the already parsed JSON
+    if not data:
+        app.logger.warning("Mark invoice paid request missing JSON body.")
+        return jsonify({"status": "error", "message": "Missing JSON request body"}), 400
+
+    # --- CHANGE HERE: Expect 'invoice_id' (integer) ---
+    invoice_id = data.get("invoice_id")
+    payment_intent_id = data.get("paymentIntentId")
+
+    # 2. Validate input presence - Check for invoice_id now
+    if not invoice_id or not payment_intent_id:
+        app.logger.warning(
+            f"Mark invoice paid request missing invoice_id ({invoice_id}) or paymentIntentId ({payment_intent_id})."
+        )
+        # Corrected error message to reflect expected keys
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Missing 'invoice_id' or 'paymentIntentId'",
+                }
+            ),
+            400,
+        )
+
+    # 3. Validate/Convert invoice_id type to integer
+    try:
+        invoice_id = int(invoice_id)
+    except (ValueError, TypeError):
+        app.logger.warning(
+            f"Mark invoice paid request received invalid invoice_id type: {invoice_id}"
+        )
+        return (
+            jsonify({"status": "error", "message": "'invoice_id' must be an integer"}),
+            400,
+        )
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()  # Assumes RealDictCursor
+
+        # 4. Verify Ownership & Check Status using integer invoice_id
+        # --- CHANGE HERE: Query by invoice_id ---
+        cursor.execute(
+            """SELECT status FROM invoices
+               WHERE invoice_id = %s AND user_id = %s""",
+            (invoice_id, current_user.id),
+        )
+        invoice_record = cursor.fetchone()
+
+        if not invoice_record:
+            app.logger.warning(
+                f"User {current_user.id} tried to mark non-existent/unauthorized invoice ID {invoice_id} as paid."
+            )
+            # Corrected error message
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Invoice not found or not authorized",
+                    }
+                ),
+                404,
+            )
+
+        current_status = invoice_record.get("status", "").lower()
+
+        if current_status == "paid":
+            app.logger.info(
+                f"Invoice ID {invoice_id} already marked as paid. Client confirmation received for PI: {payment_intent_id}"
+            )
+            return (
+                jsonify(
+                    {"status": "success", "message": "Invoice already marked as paid"}
+                ),
+                200,
+            )
+
+        # 5. Update the Invoice Status using integer invoice_id
+        # --- CHANGE HERE: Update using invoice_id ---
+        cursor.execute(
+            """UPDATE invoices
+               SET status = 'paid'
+               WHERE invoice_id = %s AND user_id = %s AND status != 'paid'""",
+            (invoice_id, current_user.id),
+        )
+
+        if cursor.rowcount == 0:
+            app.logger.info(
+                f"Invoice ID {invoice_id} status update via client had no effect (likely already paid by webhook). PI: {payment_intent_id}"
+            )
+            pass
+
+        # 6. Commit the transaction
+        conn.commit()
+        # Use invoice_id in log
+        app.logger.info(
+            f"Invoice ID {invoice_id} successfully marked as paid by user {current_user.id} via client confirmation. PI: {payment_intent_id}"
+        )
+
+        # 7. Return success response
+        return (
+            jsonify(
+                {"status": "success", "message": "Invoice successfully marked as paid"}
+            ),
+            200,
+        )
+
+    except psycopg2.Error as db_error:
+        # Use invoice_id in log
+        app.logger.error(
+            f"Database error marking invoice ID {invoice_id} paid (Client Confirm - User {current_user.id}): {db_error}"
+        )
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": "Database error occurred."}), 500
+    except Exception as e:
+        app.logger.error(
+            f"Unexpected error marking invoice ID {invoice_id} paid (Client Confirm - User {current_user.id}): {e}"
+        )
+        if conn:
+            conn.rollback()
+        return (
+            jsonify(
+                {"status": "error", "message": "An unexpected server error occurred."}
+            ),
+            500,
+        )
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 @app.route("/api/webhook", methods=["POST"])
 def stripe_webhook():
     payload = request.data  # Raw request body
