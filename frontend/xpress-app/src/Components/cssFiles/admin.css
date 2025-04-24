@@ -111,13 +111,26 @@
   font-size: 0.95rem;
 }
 /* Add variants for success/error if needed */
-/* .status-message.success { background-color: #f6ffed; border-color: #b7eb8f; color: #389e0d; } */
-/* .status-message.error { background-color: #fff1f0; border-color: #ffa39e; color: #cf1322; } */
+.status-message.success {
+  background-color: #f6ffed;
+  border-color: #b7eb8f;
+  color: #389e0d;
+}
+.status-message.error {
+  background-color: #fff1f0;
+  border-color: #ffa39e;
+  color: #cf1322;
+}
 
 /* --- Modal Styles --- */
 .ReactModal__Overlay {
   background-color: var(--overlay-bg) !important;
-  z-index: 1000;
+  z-index: 1000; /* This makes the overlay appear on top */
+  position: fixed; /* Ensure overlay covers the whole viewport */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex; /* Use flexbox for centering */
   justify-content: center;
   align-items: center;
@@ -125,14 +138,14 @@
 }
 
 .ReactModal__Content {
-  position: relative !important; /* Override default absolute */
-  /* margin: auto; Removed, handled by overlay flexbox */
+  position: relative !important; /* Allows content to sit naturally within the flex overlay */
+  /* margin: auto; Handled by overlay flexbox */
   top: auto !important; /* Override defaults */
   left: auto !important;
   right: auto !important;
   bottom: auto !important;
   width: 90% !important;
-  max-width: 650px !important; /* Slightly wider modal */
+  max-width: 650px !important; /* Default max-width */
   max-height: 90vh; /* Limit height */
   overflow-y: auto; /* Allow scrolling within modal */
   padding: 30px !important; /* Increase padding */
@@ -141,6 +154,17 @@
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
   outline: none !important;
   inset: unset !important; /* Override potential inline styles */
+  /* z-index: 1001; */ /* Usually not needed, but could add if content needs to be explicitly above overlay */
+}
+
+/* Style for larger modals if needed */
+.modal-content-container.modal-lg .ReactModal__Content {
+  max-width: 800px !important; /* Wider for large modals */
+}
+
+/* Style for extra large modals if needed */
+.modal-content-container.modal-xl .ReactModal__Content {
+  max-width: 1140px !important; /* Even wider */
 }
 
 .modal-header {
@@ -159,28 +183,30 @@
   font-weight: 600;
 }
 
-/* Style for the close button itself if needed */
-.modal-header button {
+/* Style for the close button itself */
+.modal-close-button {
+  /* Use this class on the button */
   background: none;
   border: none;
   cursor: pointer;
   padding: 5px;
   line-height: 1; /* Ensure icon aligns well */
   color: #666; /* Adjust icon color */
+  transition: color 0.2s ease;
 }
-.modal-header button:hover {
+.modal-close-button:hover {
   color: #000; /* Darker on hover */
 }
 
-.modal-content {
-  padding: 0; /* Remove padding here, handled by ReactModal__Content */
-}
+/* Removed padding from .modal-content as it's handled by .ReactModal__Content */
+/* .modal-content {
+  padding: 0;
+} */
 
 .modal-form {
   display: flex;
   flex-direction: column;
   gap: 18px; /* Increased gap */
-  /* margin-top: 15px; Removed, gap handles spacing */
 }
 
 .modal-form label {
@@ -191,30 +217,7 @@
   color: #444;
 }
 
-.modal-form input[type="text"],
-.modal-form input[type="email"],
-.modal-form input[type="password"],
-.modal-form input[type="number"],
-.modal-form input[type="date"],
-.modal-form input[type="tel"],
-.modal-form textarea,
-.modal-form select {
-  padding: 12px 15px; /* Adjust padding */
-  border: 1px solid #ccc; /* Slightly darker border */
-  border-radius: 5px;
-  font-size: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  width: 100%;
-  background-color: #fff; /* Ensure background is white */
-}
-
-.modal-form input:focus,
-.modal-form textarea:focus,
-.modal-form select:focus {
-  border-color: var(--yellow-hover); /* Use theme color for focus */
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3); /* Focus ring matching theme */
-}
+/* Consolidate common input/select/textarea styles */
 .modal-form-input,
 .modal-form-select,
 .modal-form-textarea {
@@ -227,19 +230,32 @@
   background-color: #fff; /* Ensure white background */
   box-sizing: border-box; /* Include padding/border in width calculation */
   transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Smooth focus transition */
-  /* margin-bottom: 0; */ /* **Remove margin if using 'gap' on .modal-form** */
 }
-.modal-form textarea {
+
+.modal-form-textarea {
   min-height: 80px; /* Minimum height for textareas */
   resize: vertical; /* Allow vertical resize */
 }
 
-.modal-form select {
+.modal-form-select {
   cursor: pointer;
+  appearance: none; /* Remove default system appearance */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236c757d' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E"); /* Basic chevron */
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  padding-right: 2.5rem; /* Make space for the custom arrow */
+}
+
+.modal-form-input:focus,
+.modal-form-textarea:focus,
+.modal-form-select:focus {
+  border-color: var(--yellow-hover); /* Use theme color for focus */
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3); /* Focus ring matching theme */
 }
 
 .modal-form input[type="search"]::-webkit-search-cancel-button {
-  /* Style the search cancel button if needed */
   cursor: pointer;
 }
 
@@ -251,10 +267,7 @@
   display: block;
 }
 
-/* Photo Grid Styles (Existing) */
-/* --- In the Existing CSS File --- */
-
-/* Photo Grid Styles */
+/* --- Photo Grid Styles --- */
 .photo-grid {
   display: grid; /* Use grid for photo layout */
   grid-template-columns: repeat(
@@ -264,139 +277,244 @@
   gap: 15px;
   margin-top: 25px;
 }
-.photo-grid div {
-  /* Container for image and caption */
+
+.photo-item {
+  /* Class added in JS for the container */
   text-align: center;
   font-size: 0.85rem;
   color: #444;
+  position: relative; /* For positioning caption container */
+  overflow: hidden; /* Contain hover effects/shadows */
+  border-radius: 8px; /* Match image radius */
 }
-.photo-grid img {
+
+.photo-item img {
   width: 100%;
-  /* height: 120px; */ /* <-- REMOVE fixed height */
-  aspect-ratio: 4 / 3; /* <-- ADD desired aspect ratio (e.g., 4:3, 16:9, 1:1) */
-  object-fit: cover; /* Keep cover: Fills the box, maintains aspect ratio, crops if needed */
-  border-radius: 8px; /* Match modal radius */
+  aspect-ratio: 4 / 3; /* Consistent aspect ratio */
+  object-fit: cover; /* Cover the area */
+  border-radius: 8px; /* Rounded corners */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: block; /* Remove extra space below image */
-  background-color: #eee; /* Optional: background for loading/contain */
+  background-color: #eee; /* Placeholder background */
 }
-.photo-grid img:hover {
+
+.photo-item a:hover img {
+  /* Apply hover effect via parent link */
   transform: scale(1.03);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
-.photo-grid a {
-  /* Style link if wrapping image */
+
+.photo-item a {
+  /* Style link wrapping image */
   display: block;
   text-decoration: none;
   color: inherit;
   border-radius: 8px; /* Match image radius */
-  overflow: hidden; /* Clip hover effect */
+}
+
+.photo-caption-container {
+  padding: 8px 5px; /* Add some padding */
+  display: flex; /* Use flex for alignment */
+  justify-content: space-between; /* Space out caption and icon */
+  align-items: center;
+  gap: 5px; /* Space between caption and icon */
 }
 
 .photo-caption {
-  margin-top: 8px; /* Increased spacing */
   font-weight: 500;
-  overflow-wrap: break-word; /* Prevent long captions from overflowing */
+  overflow-wrap: break-word;
+  text-align: left; /* Align caption text left */
+  flex-grow: 1; /* Allow caption to take available space */
+  white-space: nowrap; /* Prevent wrapping */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Add ellipsis */
 }
+
+.photo-link-icon {
+  color: #555; /* Icon color */
+  transition: color 0.2s ease;
+  flex-shrink: 0; /* Prevent icon from shrinking */
+}
+.photo-link-icon:hover {
+  color: var(--yellow-hover); /* Theme color on hover */
+}
+
 .photo-status {
+  /* If you add status display later */
   font-size: 0.75rem;
   color: #777;
   margin-top: 4px;
 }
 
 /* --- NEW: SMS Recipient List Styles --- */
-.sms-recipient-list {
-  max-height: 200px; /* Limit height and make scrollable */
+.recipient-list {
+  /* Class added in JS for the UL */
+  max-height: 150px; /* Limit height and make scrollable */
   overflow-y: auto;
   border: 1px solid #ccc; /* Match input border */
-  padding: 10px 15px; /* Match input padding */
+  padding: 10px;
   border-radius: 5px; /* Match input radius */
   margin-bottom: 18px; /* Space below the list */
-  background-color: #fdfdfd; /* Slightly off-white background inside */
+  background-color: #fdfdfd;
+  list-style: none; /* Remove default list bullets */
 }
 
-.sms-recipient-list label {
-  display: block; /* Each user on a new line */
-  margin-bottom: 10px; /* Space between users */
-  cursor: pointer;
-  font-weight: normal; /* Override default bold label */
-  color: #333; /* User text color */
-  transition: background-color 0.15s ease;
-  padding: 5px; /* Add slight padding for hover effect */
-  border-radius: 3px;
-}
-
-.sms-recipient-list label:hover {
-  background-color: #f0f0f0; /* Subtle hover background */
-}
-
-.sms-recipient-list label:last-child {
-  margin-bottom: 0; /* Remove margin from last item */
-}
-
-.sms-recipient-list input[type="checkbox"] {
-  margin-right: 10px; /* More space between checkbox and text */
-  cursor: pointer;
-  /* Optional: Style checkbox appearance further */
-  vertical-align: middle; /* Align checkbox with text */
-}
-
-.sms-recipient-list p {
-  /* Style the 'no users found' message */
-  color: #666;
-  font-style: italic;
-  text-align: center;
-  padding: 10px 0;
-}
-/* TEST */
-/* Modal content sizing */
-.modal-content {
-  padding: 1rem;
-  max-width: 90%;
-  width: 90vw;
-  margin: auto;
-}
-
-/* Header layout */
-.modal-header {
+.recipient-item {
+  /* Class added in JS for the LI */
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  padding: 6px 5px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+.recipient-item:last-child {
+  border-bottom: none;
 }
 
-/* Make table scrollable on narrow viewports */
+.remove-recipient-button {
+  /* Class added in JS for the remove button */
+  background: none;
+  border: none;
+  color: #dc3545; /* Danger color */
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0 5px;
+  line-height: 1;
+}
+.remove-recipient-button:hover {
+  color: #a71d2a; /* Darker danger color */
+}
+
+/* --- Unpaid Invoices Table Styles --- */
 .modal-table-container {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  max-height: 450px; /* Adjust max height as needed */
+  overflow-y: auto;
+  overflow-x: auto; /* Allow horizontal scroll if needed */
+  margin-top: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
-/* Base table styling */
 .modal-table {
   width: 100%;
   border-collapse: collapse;
-}
-.modal-table th,
-.modal-table td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-  white-space: nowrap;
+  font-size: 0.9rem;
 }
 
-/* Responsive “stacked” rows below 600px */
-@media (max-width: 600px) {
-  .modal-table,
-  .modal-table thead,
-  .modal-table tbody,
-  .modal-table th,
-  .modal-table td,
-  .modal-table tr {
-    display: block;
+.modal-table th,
+.modal-table td {
+  border-bottom: 1px solid #ddd; /* Only bottom border for rows */
+  padding: 10px 12px; /* More padding */
+  text-align: left;
+  white-space: nowrap; /* Prevent wrapping by default */
+}
+.modal-table td {
+  white-space: normal; /* Allow user name/email to wrap */
+}
+
+.modal-table th {
+  background-color: #f8f9fa; /* Light background for header */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-weight: 600; /* Bolder header text */
+}
+
+/* Center checkbox */
+.modal-table th:first-child,
+.modal-table td:first-child {
+  text-align: center;
+  width: 40px; /* Fixed width */
+  padding: 8px 5px; /* Adjust padding */
+}
+.modal-table input[type="checkbox"] {
+  cursor: pointer;
+  vertical-align: middle; /* Align checkbox */
+}
+
+/* Status indicator styling (example) */
+.status-paid {
+  color: #28a745;
+  font-weight: bold;
+}
+.status-unpaid {
+  color: #ffc107;
+  font-weight: bold;
+}
+.status-overdue {
+  color: #dc3545;
+  font-weight: bold;
+}
+.status-draft {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* --- Reminder Config Styles --- */
+.reminder-config {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+.reminder-config h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+.reminder-config .form-group {
+  margin-bottom: 15px;
+}
+.reminder-config label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+.reminder-config small {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.8em;
+  color: #666;
+}
+
+/* --- Modal Action Button Specific Styles --- */
+.modal-actions {
+  /* Container for SMS/Notification buttons */
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee; /* Separator */
+}
+.modal-actions button {
+  /* Inherits general button styles, add specifics here if needed */
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+.modal-actions button svg {
+  margin-right: 6px; /* Space between icon and text */
+}
+
+/* --- Responsive Table for Modals --- */
+@media (max-width: 768px) {
+  /* Adjust breakpoint as needed */
+  .modal-table thead {
+    display: none; /* Hide header */
   }
-  .modal-table thead tr {
-    display: none;
+  .modal-table,
+  .modal-table tbody,
+  .modal-table tr,
+  .modal-table td {
+    display: block;
+    width: 100%;
   }
   .modal-table tr {
     margin-bottom: 1rem;
@@ -405,17 +523,35 @@
     padding: 0.5rem;
   }
   .modal-table td {
-    position: relative;
-    padding-left: 50%;
-    text-align: right;
+    display: flex; /* Use flex for alignment */
+    justify-content: space-between; /* Space label and value */
+    align-items: center; /* Center items vertically */
+    text-align: right; /* Align value to the right */
+    padding: 8px 10px; /* Adjust padding */
+    border: none;
+    border-bottom: 1px solid #eee;
+    white-space: normal; /* Allow content wrapping */
+  }
+  .modal-table tr td:last-child {
+    border-bottom: none; /* Remove border from last cell in the stack */
   }
   .modal-table td:before {
-    content: attr(data-label);
-    position: absolute;
-    left: 0;
-    width: 45%;
-    padding-left: 0.5rem;
+    content: attr(data-label); /* Use data-label for the pseudo-header */
     font-weight: bold;
     text-align: left;
+    padding-right: 10px; /* Space between label and value */
+    white-space: nowrap; /* Prevent label wrapping */
+  }
+  /* Adjust checkbox column on mobile */
+  .modal-table td:first-child {
+    justify-content: flex-start; /* Align checkbox to the left */
+    padding-left: 10px;
+  }
+  .modal-table td:first-child::before {
+    content: ""; /* Label for checkbox */
+    margin-right: auto; /* Push checkbox to the start */
+  }
+  .modal-table td:first-child input[type="checkbox"] {
+    margin-left: 10px; /* Space after label */
   }
 }

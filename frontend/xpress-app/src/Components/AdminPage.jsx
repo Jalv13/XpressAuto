@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react"; // Added useCallback
 import { Link } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import Modal from "react-modal";
-import { X, ExternalLink } from "lucide-react"; // Added ExternalLink
+import { X, ExternalLink, MessageSquare, Bell } from "lucide-react"; // Added Icons
 import axios from "axios";
 import "./cssFiles/PossibleDeadCSS.css"; // Keep if relevant
 import "./cssFiles/admin.css";
@@ -14,10 +14,11 @@ function AdminPage() {
   // Main modal state
   const [activeModal, setActiveModal] = useState(null);
   const [message, setMessage] = useState("");
+  const [modalMessage, setModalMessage] = useState(""); // Specific message for modals
 
   // Shared data
   const [users, setUsers] = useState([]);
-  const [vehicles, setVehicles] = useState([]); // Keep if needed by other modals, e.g., Invoice
+  const [vehicles, setVehicles] = useState([]); // Keep if needed by other modals
 
   // Send Notifications state
   const [selectedUser, setSelectedUser] = useState("");
@@ -31,10 +32,16 @@ function AdminPage() {
   const [newUserLastName, setNewUserLastName] = useState("");
   const [newUserPhone, setNewUserPhone] = useState("");
 
-  // Add Service state
-  const [serviceName, setServiceName] = useState("");
-  const [serviceDescription, setServiceDescription] = useState("");
-  const [servicePrice, setServicePrice] = useState("");
+  // --- ADDED Unpaid Invoices state ---
+  const [unpaidInvoices, setUnpaidInvoices] = useState([]);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState(new Set()); // Use a Set for efficient add/delete
+  const [isLoadingUnpaidInvoices, setIsLoadingUnpaidInvoices] = useState(false);
+  const [unpaidInvoiceError, setUnpaidInvoiceError] = useState("");
+  const [reminderMessage, setReminderMessage] = useState(
+    "Reminder: You have {invoice_count} unpaid invoice(s) totaling ${total_due}. Please log in to view details."
+  ); // Default reminder message with placeholders
+  const [reminderTitle, setReminderTitle] = useState("Unpaid Invoice Reminder"); // Default notification title
+  // --- END ADDED Unpaid Invoices state ---
 
   // Add Loyalty Points state
   const [loyaltySearchQuery, setLoyaltySearchQuery] = useState("");
@@ -48,10 +55,10 @@ function AdminPage() {
     useState("");
   const [vehiclesForSelectedUser, setVehiclesForSelectedUser] = useState([]);
 
-  // Send Invoice state
-  const [invoiceEmail, setInvoiceEmail] = useState(""); // Can likely be removed if backend uses user_id
+  // Send Invoice state (Create Invoice Modal)
+  // const [invoiceEmail, setInvoiceEmail] = useState(""); // Can likely be removed if backend uses user_id
   const [invoiceVehicleId, setInvoiceVehicleId] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState(""); // Assuming backend generates this now
+  // const [invoiceNumber, setInvoiceNumber] = useState(""); // Assuming backend generates this now
   const [subtotal, setSubtotal] = useState("");
   const [taxAmount, setTaxAmount] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
@@ -60,7 +67,7 @@ function AdminPage() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Invoice State - Specific
+  // Invoice State - Specific (Create Invoice Modal)
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState("");
   const [invoiceSelectedUser, setInvoiceSelectedUser] = useState("");
   const [vehiclesForInvoice, setVehiclesForInvoice] = useState([]);
@@ -72,7 +79,7 @@ function AdminPage() {
   const [selectedVehicleForPhotos, setSelectedVehicleForPhotos] = useState("");
   const [vehiclePhotos, setVehiclePhotos] = useState([]);
 
-  // Send SMS state
+  // Send Bulk SMS state
   const [smsRecipients, setSmsRecipients] = useState([]); // Array of user_ids
   const [smsMessage, setSmsMessage] = useState("");
   const [smsSearchQuery, setSmsSearchQuery] = useState(""); // For filtering users
@@ -80,19 +87,51 @@ function AdminPage() {
   // Active Jobs state
   const [activeJobs, setActiveJobs] = useState([]);
 
+  // Fetch unpaid invoices (using useCallback to potentially optimize)
+  const fetchUnpaidInvoices = useCallback(async () => {
+    setIsLoadingUnpaidInvoices(true);
+    setUnpaidInvoiceError("");
+    setModalMessage("Loading unpaid invoices..."); // Use modal message
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/get-unpaid-invoices",
+        { withCredentials: true }
+      );
+      if (res.data.status === "success") {
+        setUnpaidInvoices(res.data.unpaid_invoices);
+        setModalMessage(""); // Clear loading message on success
+      } else {
+        throw new Error(res.data.message || "Failed to fetch unpaid invoices");
+      }
+    } catch (err) {
+      console.error("Error fetching unpaid invoices:", err);
+      const errorMsg = `Error loading unpaid invoices: ${
+        err.response?.data?.message || err.message
+      }`;
+      setUnpaidInvoiceError(errorMsg);
+      setModalMessage(errorMsg); // Show error in modal
+    } finally {
+      setIsLoadingUnpaidInvoices(false);
+      // Optionally clear general message if only modal message is desired
+      // setMessage("");
+    }
+  }, []); // Empty dependency array means this function is created once
+
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
-    setMessage(""); // Clear previous messages
+    setMessage(""); // Clear general page message
+    setModalMessage(""); // Clear previous modal messages
 
-    // Fetch users for certain modals
+    // Fetch users for relevant modals (keep existing logic)
     if (
       modalName === "sendNotifications" ||
       modalName === "addLoyaltyPoints" ||
       modalName === "updateVehicleStatus" ||
       modalName === "sendInvoice" ||
       modalName === "viewPhotos" ||
-      modalName === "sendSms"
+      modalName === "sendSms" ||
+      modalName === "unpaidInvoices" // Also fetch users if needed for Unpaid Invoice context (e.g., display details)
     ) {
       axios
         .get("http://localhost:5000/api/get-users", { withCredentials: true })
@@ -101,29 +140,33 @@ function AdminPage() {
             setUsers(res.data.users);
           } else {
             console.error("Failed to fetch users:", res.data.message);
-            setMessage(
+            setModalMessage(
+              // Set modal message for errors
               `Error loading users: ${res.data.message || "Unknown error"}`
             );
           }
         })
         .catch((err) => {
           console.error("Error fetching users:", err);
-          setMessage(
+          setModalMessage(
+            // Set modal message for errors
             `Error loading users: ${err.response?.data?.message || err.message}`
           );
         });
     }
 
-    // Fetch active jobs when opening Manage Posts
+    // Fetch active jobs (keep existing logic)
     if (modalName === "active-jobs") {
       axios
         .get("http://localhost:5000/api/active-jobs", { withCredentials: true })
         .then((res) => {
           if (res.data.status === "success") {
             setActiveJobs(res.data.active_jobs);
+            setModalMessage(""); // Clear message on success
           } else {
             console.error("Failed to fetch active jobs:", res.data.message);
-            setMessage(
+            setModalMessage(
+              // Use modal message
               `Error loading active jobs: ${
                 res.data.message || "Unknown error"
               }`
@@ -132,7 +175,8 @@ function AdminPage() {
         })
         .catch((err) => {
           console.error("Error fetching active jobs:", err);
-          setMessage(
+          setModalMessage(
+            // Use modal message
             `Error loading active jobs: ${
               err.response?.data?.message || err.message
             }`
@@ -140,12 +184,17 @@ function AdminPage() {
         });
     }
 
-    // Add specific data fetching for other modals if necessary
+    // --- ADDED: Fetch unpaid invoices when opening the new modal ---
+    if (modalName === "unpaidInvoices") {
+      fetchUnpaidInvoices(); // Call the fetch function
+    }
   };
 
   const closeModal = () => {
     setActiveModal(null);
     setMessage("");
+    setModalMessage(""); // Clear modal message on close
+
     // Reset all modal-specific states
     setSelectedUser("");
     setNotificationTitle("");
@@ -155,20 +204,26 @@ function AdminPage() {
     setNewUserFirstName("");
     setNewUserLastName("");
     setNewUserPhone("");
-    setServiceName("");
-    setServiceDescription("");
-    setServicePrice("");
+    // --- ADDED Unpaid Invoices Reset ---
+    setUnpaidInvoices([]);
+    setSelectedInvoiceIds(new Set()); // Reset to empty Set
+    setIsLoadingUnpaidInvoices(false);
+    setUnpaidInvoiceError("");
+    setReminderMessage(
+      "Reminder: You have {invoice_count} unpaid invoice(s) totaling ${total_due}. Please log in to view details."
+    ); // Reset reminder message
+    setReminderTitle("Unpaid Invoice Reminder"); // Reset reminder title
+    // --- END ADDED Unpaid Invoices Reset ---
     setLoyaltySearchQuery("");
     setLoyaltySelectedUser("");
     setLoyaltyPoints("");
-    // setVehicleSearchQuery(""); // Removed as it wasn't defined/used
     setSelectedVehicle(null);
     setNewVehicleStatus("OffLot");
     setSelectedUserForVehicleStatus("");
     setVehiclesForSelectedUser([]);
-    setInvoiceEmail("");
+    // setInvoiceEmail(""); // Removed
     setInvoiceVehicleId("");
-    setInvoiceNumber("");
+    // setInvoiceNumber(""); // Removed
     setSubtotal("");
     setTaxAmount("");
     setDiscountAmount("");
@@ -183,25 +238,22 @@ function AdminPage() {
     setVehiclesForPhotos([]);
     setSelectedVehicleForPhotos("");
     setVehiclePhotos([]);
-    // --- Reset SMS state ---
     setSmsRecipients([]);
     setSmsMessage("");
-    setSmsSearchQuery(""); // Reset SMS search query
+    setSmsSearchQuery("");
   };
 
-  // --- Filtering Logic ---
-
+  // --- Filtering Logic (Keep existing filters) ---
   // Filter for Loyalty Points
   const filteredUsers = users.filter((user) => {
     const query = loyaltySearchQuery.toLowerCase();
-    // Basic check if properties exist before calling toLowerCase
     const nameMatch = user.full_name?.toLowerCase().includes(query) || false;
     const emailMatch = user.email?.toLowerCase().includes(query) || false;
     const phoneMatch = user.phone?.toLowerCase().includes(query) || false;
     return nameMatch || emailMatch || phoneMatch;
   });
 
-  // Filter for Invoice Users
+  // Filter for Create Invoice Users
   const filteredInvoiceUsers = users.filter((user) => {
     const query = invoiceSearchQuery.toLowerCase();
     const nameMatch = user.full_name?.toLowerCase().includes(query) || false;
@@ -210,35 +262,28 @@ function AdminPage() {
     return nameMatch || emailMatch || phoneMatch;
   });
 
-  // Filter for SMS Dropdown Options (Similar to others, but also checks phone and excludes selected)
+  // Filter for SMS Dropdown Options (Bulk SMS modal)
   const filteredSmsUsersForDropdown = users.filter((user) => {
     const query = smsSearchQuery.toLowerCase();
-    const hasPhone = !!user.phone; // Ensure phone number exists and is not empty
-
-    // Check if user matches the search query
+    const hasPhone = !!user.phone;
     const matchesQuery =
       hasPhone &&
       (user.full_name?.toLowerCase().includes(query) ||
         user.email?.toLowerCase().includes(query) ||
         user.phone?.toLowerCase().includes(query));
-
-    // Check if the user is already in the recipients list
     const isAlreadySelected = smsRecipients.includes(user.user_id);
-
-    return matchesQuery && !isAlreadySelected; // Must match query, have phone, and not be selected
+    return matchesQuery && !isAlreadySelected;
   });
 
-  // --- Handlers for form submissions & changes ---
+  // --- Handlers for form submissions & changes (Keep existing handlers, adapt message state) ---
 
-  // Invoice Handlers
+  // Create Invoice Handlers
   const handleInvoiceUserChange = (e) => {
     const userId = e.target.value;
     setInvoiceSelectedUser(userId);
     // Find user details - assuming 'users' state is populated
-    const selectedUserDetails = users.find(
-      (user) => user.user_id === parseInt(userId)
-    );
-    setInvoiceEmail(selectedUserDetails?.email || ""); // Keep if needed, otherwise remove
+    // const selectedUserDetails = users.find( user => user.user_id === parseInt(userId) );
+    // setInvoiceEmail(selectedUserDetails?.email || ""); // Keep if needed, otherwise remove
     setInvoiceVehicleId(""); // Reset vehicle when user changes
     setVehiclesForInvoice([]); // Clear old vehicles
 
@@ -252,7 +297,7 @@ function AdminPage() {
           if (res.data.status === "success") {
             setVehiclesForInvoice(res.data.vehicles);
           } else {
-            setMessage(
+            setModalMessage(
               `Error fetching vehicles for invoice: ${
                 res.data.message || "Unknown error"
               }`
@@ -261,7 +306,7 @@ function AdminPage() {
         })
         .catch((err) => {
           console.error("Error fetching vehicles for invoice:", err);
-          setMessage(
+          setModalMessage(
             `Error fetching vehicles: ${
               err.response?.data?.message || err.message
             }`
@@ -269,19 +314,18 @@ function AdminPage() {
         });
     }
   };
-
   const handleInvoiceVehicleChange = (e) => {
     setInvoiceVehicleId(e.target.value);
   };
 
-  // Notification Submit
+  // Send Notification Submit (Individual Notification Modal)
   const handleNotificationSubmit = async (e) => {
     e.preventDefault();
     if (!selectedUser) {
-      setMessage("Please select a user.");
+      setModalMessage("Please select a user."); // Use modal message
       return;
     }
-    setMessage("Sending notification..."); // Indicate processing
+    setModalMessage("Sending notification..."); // Use modal message
     try {
       const res = await axios.post(
         "http://localhost:5000/api/send-notification",
@@ -293,16 +337,18 @@ function AdminPage() {
         { withCredentials: true }
       );
       if (res.data.status === "success") {
-        setMessage("Notification sent!");
+        setMessage("Notification sent successfully!"); // General message ok here after close
         closeModal();
       } else {
-        setMessage(
+        setModalMessage(
+          // Use modal message
           `Failed to send notification: ${res.data.message || "Unknown error"}`
         );
       }
     } catch (err) {
       console.error("Send notification error:", err);
-      setMessage(
+      setModalMessage(
+        // Use modal message
         `An error occurred: ${err.response?.data?.message || err.message}`
       );
     }
@@ -311,66 +357,35 @@ function AdminPage() {
   // Add User Submit
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
-    setMessage("Adding user...");
+    setModalMessage("Adding user..."); // Use modal message
     try {
       const res = await axios.post(
         "http://localhost:5000/api/add-user",
         {
           email: newUserEmail,
-          password: newUserPassword,
+          password: newUserPassword, // Ensure you are hashing on the backend!
           first_name: newUserFirstName,
           last_name: newUserLastName,
           phone: newUserPhone,
         },
         { withCredentials: true }
-      ); // Assume admin needs auth? Adjust if not.
+      );
       if (res.data.status === "success") {
-        setMessage("User added successfully!");
+        setMessage("User added successfully!"); // General message ok after close
         closeModal();
-        // Optionally refresh user list if needed immediately
-        // openModal(activeModal); // This might re-fetch users
+        // Consider fetching users again if the list needs immediate update
+        // fetchUsers(); // You would need to define a fetchUsers function
       } else {
-        setMessage(
+        setModalMessage(
+          // Use modal message
           `Failed to add user: ${res.data.message || "Unknown error"}`
         );
       }
     } catch (err) {
       console.error("Add user error:", err);
-      setMessage(
+      setModalMessage(
+        // Use modal message
         `An error occurred while adding user: ${
-          err.response?.data?.message || err.message
-        }`
-      );
-    }
-  };
-
-  // Add Service Submit
-  const handleAddServiceSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("Adding service...");
-    try {
-      // Assuming an endpoint /api/add-service exists and requires auth
-      const res = await axios.post(
-        "http://localhost:5000/api/add-service",
-        {
-          service_name: serviceName,
-          service_description: serviceDescription,
-          service_price: servicePrice,
-        },
-        { withCredentials: true }
-      ); // Assume admin needs auth
-      if (res.data.status === "success") {
-        setMessage("Service added successfully!");
-        closeModal();
-      } else {
-        setMessage(
-          `Failed to add service: ${res.data.message || "Unknown error"}`
-        );
-      }
-    } catch (err) {
-      console.error("Add service error:", err);
-      setMessage(
-        `An error occurred while adding service: ${
           err.response?.data?.message || err.message
         }`
       );
@@ -381,34 +396,36 @@ function AdminPage() {
   const handleAddLoyaltyPointsSubmit = async (e) => {
     e.preventDefault();
     if (!loyaltySelectedUser) {
-      setMessage("Please select a user.");
+      setModalMessage("Please select a user."); // Use modal message
       return;
     }
     if (!loyaltyPoints || loyaltyPoints <= 0) {
-      setMessage("Please enter a valid number of points to add.");
+      setModalMessage("Please enter a valid number of points to add."); // Use modal message
       return;
     }
-    setMessage("Adding points...");
+    setModalMessage("Adding points..."); // Use modal message
     try {
       const res = await axios.post(
         "http://localhost:5000/api/add-loyalty-points",
         {
-          user_id: loyaltySelectedUser,
+          user_id: loyaltySelectedUser, // IMPORTANT: Ensure this sends the TARGET user's ID
           points: loyaltyPoints,
         },
-        { withCredentials: true } // Ensure admin auth is sent
+        { withCredentials: true } // Admin auth
       );
       if (res.data.status === "success") {
-        setMessage("Loyalty points added!");
+        setMessage("Loyalty points added!"); // General message ok after close
         closeModal();
       } else {
-        setMessage(
+        setModalMessage(
+          // Use modal message
           `Failed to add loyalty points: ${res.data.message || "Unknown error"}`
         );
       }
     } catch (err) {
       console.error("Loyalty points error:", err);
-      setMessage(
+      setModalMessage(
+        // Use modal message
         `An error occurred while adding loyalty points: ${
           err.response?.data?.message || err.message
         }`
@@ -420,10 +437,10 @@ function AdminPage() {
   const handleUpdateVehicleStatusSubmit = async (e) => {
     e.preventDefault();
     if (!selectedVehicle) {
-      setMessage("Please select a vehicle.");
+      setModalMessage("Please select a vehicle."); // Use modal message
       return;
     }
-    setMessage("Updating status...");
+    setModalMessage("Updating status..."); // Use modal message
     try {
       const res = await axios.put(
         `http://localhost:5000/api/update-vehicle-status/${selectedVehicle.vehicle_id}`,
@@ -431,10 +448,12 @@ function AdminPage() {
         { withCredentials: true }
       );
       if (res.data.status === "success") {
-        setMessage("Vehicle status updated!");
+        setMessage("Vehicle status updated!"); // General message ok after close
         closeModal();
+        // Optionally re-fetch data if needed immediately (e.g., active jobs)
       } else {
-        setMessage(
+        setModalMessage(
+          // Use modal message
           `Failed to update vehicle status: ${
             res.data.message || "Unknown error"
           }`
@@ -442,7 +461,8 @@ function AdminPage() {
       }
     } catch (err) {
       console.error("Update vehicle status error:", err);
-      setMessage(
+      setModalMessage(
+        // Use modal message
         `An error occurred while updating vehicle status: ${
           err.response?.data?.message || err.message
         }`
@@ -450,7 +470,7 @@ function AdminPage() {
     }
   };
 
-  // Send Invoice Submit
+  // Send Invoice Submit (Create Invoice Modal)
   const handleSendInvoiceSubmit = async (e) => {
     e.preventDefault();
     // Basic validation
@@ -461,45 +481,47 @@ function AdminPage() {
       !invoiceStatus ||
       !dueDate
     ) {
-      setMessage(
+      setModalMessage(
+        // Use modal message
         "Please fill in all required invoice fields (User, Vehicle, Total, Status, Due Date)."
       );
       return;
     }
-    setMessage("Creating invoice...");
+    setModalMessage("Creating invoice..."); // Use modal message
     try {
-      // Assuming backend generates invoice_number
+      // Assuming backend generates invoice_number and uses user_id
       const res = await axios.post(
         "http://localhost:5000/api/create-invoice",
         {
-          // Send user_id if backend expects it
-          user_id: invoiceSelectedUser,
+          user_id: invoiceSelectedUser, // Send user_id
           vehicle_id: invoiceVehicleId,
           subtotal,
-          tax_amount: taxAmount || 0, // Default tax/discount to 0 if empty
+          tax_amount: taxAmount || 0,
           discount_amount: discountAmount || 0,
           total_amount: totalAmount,
           status: invoiceStatus,
           due_date: dueDate,
           notes,
-          items: [], // Assuming items are added separately or not via this form
         },
         { withCredentials: true }
-      ); // Assume admin needs auth
+      );
 
       if (res.data.status === "success") {
         setMessage(
+          // General message ok after close
           `Invoice ${res.data.invoice_number || ""} created successfully!`
         );
         closeModal();
       } else {
-        setMessage(
+        setModalMessage(
+          // Use modal message
           `Failed to create invoice: ${res.data.message || "Unknown error"}`
         );
       }
     } catch (err) {
       console.error("Send invoice error:", err);
-      setMessage(
+      setModalMessage(
+        // Use modal message
         `An error occurred while creating invoice: ${
           err.response?.data?.message || err.message
         }`
@@ -507,16 +529,14 @@ function AdminPage() {
     }
   };
 
-  // Vehicle Status Handlers
-  const handleUserChange = (e) => {
-    // Renamed from generic handleUserChange for clarity
+  // Update Vehicle Status Handlers
+  const handleUserChangeForVehicleStatus = (e) => {
+    // Renamed for clarity
     const userId = e.target.value;
     setSelectedUserForVehicleStatus(userId);
-    // Reset vehicle selection when user changes
     setSelectedVehicle(null);
     setVehiclesForSelectedUser([]);
     if (userId) {
-      // Fetch vehicles for the selected user
       axios
         .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
           withCredentials: true,
@@ -525,14 +545,14 @@ function AdminPage() {
           if (res.data.status === "success") {
             setVehiclesForSelectedUser(res.data.vehicles);
           } else {
-            setMessage(
+            setModalMessage(
               `Error fetching vehicles: ${res.data.message || "Unknown error"}`
             );
           }
         })
         .catch((err) => {
           console.error("Error fetching vehicles for user:", err);
-          setMessage(
+          setModalMessage(
             `Error fetching vehicles: ${
               err.response?.data?.message || err.message
             }`
@@ -540,15 +560,13 @@ function AdminPage() {
         });
     }
   };
-
-  const handleVehicleChange = (e) => {
-    // Renamed from generic handleVehicleChange
+  const handleVehicleChangeForVehicleStatus = (e) => {
+    // Renamed for clarity
     const vehicleId = Number(e.target.value);
     const vehicle = vehiclesForSelectedUser.find(
       (v) => v.vehicle_id === vehicleId
     );
     setSelectedVehicle(vehicle);
-    // Optionally set the status dropdown to the vehicle's current status
     if (vehicle) {
       setNewVehicleStatus(vehicle.vehicle_status || "OffLot");
     }
@@ -558,7 +576,6 @@ function AdminPage() {
   const handleUserForPhotosChange = (e) => {
     const userId = e.target.value;
     setSelectedUserForPhotos(userId);
-    // Reset vehicle and photos when user changes
     setSelectedVehicleForPhotos("");
     setVehiclePhotos([]);
     setVehiclesForPhotos([]);
@@ -571,7 +588,7 @@ function AdminPage() {
           if (res.data.status === "success") {
             setVehiclesForPhotos(res.data.vehicles);
           } else {
-            setMessage(
+            setModalMessage(
               `Error fetching vehicles for photos: ${
                 res.data.message || "Unknown error"
               }`
@@ -580,7 +597,7 @@ function AdminPage() {
         })
         .catch((err) => {
           console.error("Error fetching vehicles for photos:", err);
-          setMessage(
+          setModalMessage(
             `Error fetching vehicles: ${
               err.response?.data?.message || err.message
             }`
@@ -588,33 +605,29 @@ function AdminPage() {
         });
     }
   };
-
   const handleVehicleForPhotosChange = (e) => {
     const vehicleId = e.target.value;
     setSelectedVehicleForPhotos(vehicleId);
     setVehiclePhotos([]); // Clear previous photos
     if (vehicleId) {
+      setModalMessage("Loading photos..."); // Indicate loading
       axios
         .get(`http://localhost:5000/api/get-vehicle-photos/${vehicleId}`, {
-          withCredentials: true, // Assuming admin needs to be logged in
+          withCredentials: true,
         })
         .then((res) => {
           if (res.data.status === "success") {
-            // Assuming the backend's /api/get-vehicle-photos only returns photo details (media_id, file_url, title, etc.)
             setVehiclePhotos(res.data.photos);
-            // If status per photo is needed, the backend endpoint must provide it.
-            // Example if backend provided vehicle_status at top level:
-            // const status = res.data.vehicle_status;
-            // setVehiclePhotos(res.data.photos.map(p => ({ ...p, status })));
+            setModalMessage(""); // Clear loading message
           } else {
-            setMessage(
+            setModalMessage(
               `Error fetching photos: ${res.data.message || "Unknown error"}`
             );
           }
         })
         .catch((err) => {
           console.error("Error fetching vehicle photos:", err);
-          setMessage(
+          setModalMessage(
             `Error fetching photos: ${
               err.response?.data?.message || err.message
             }`
@@ -623,71 +636,57 @@ function AdminPage() {
     }
   };
 
-  // --- SMS Handlers --- START ---
+  // --- Bulk SMS Handlers (Send Bulk SMS Modal) ---
   const handleSmsUserSelectToAdd = (e) => {
     const userId = parseInt(e.target.value, 10);
     if (userId && !smsRecipients.includes(userId)) {
-      // Check if valid ID and not already added
       setSmsRecipients((prev) => [...prev, userId]);
     }
-    // The select value is fixed to "", so no need to reset e.target.value here
-    // Clearing the search query might be helpful, or not, depending on UX preference
-    // setSmsSearchQuery("");
+    // Optional: setSmsSearchQuery(""); // Clear search after adding
   };
-
   const handleRemoveSmsRecipient = (userIdToRemove) => {
     setSmsRecipients((prev) => prev.filter((id) => id !== userIdToRemove));
   };
-
   const handleSendSmsSubmit = async (e) => {
+    // Send Bulk SMS handler
     e.preventDefault();
 
     if (smsRecipients.length === 0) {
-      setMessage("Please select at least one recipient.");
+      setModalMessage("Please select at least one recipient.");
       return;
     }
     if (!smsMessage.trim()) {
-      setMessage("Please enter a message to send.");
+      setModalMessage("Please enter a message to send.");
       return;
     }
 
-    setMessage("Sending messages..."); // Indicate processing
+    setModalMessage("Sending messages..."); // Indicate processing
 
     const successes = [];
     const failures = [];
     const finalMessage = `From Express Auto: ${smsMessage} Reply STOP to stop receiving texts.`;
 
-    // Using Promise.allSettled to send messages concurrently and collect all results
     const sendPromises = smsRecipients.map(async (userId) => {
       const user = users.find((u) => u.user_id === userId);
-
       if (!user || !user.phone) {
         return {
-          // Return failure object for missing phone
           status: "failed",
-          reason: "Missing or invalid phone number in profile",
+          reason: "Missing phone",
           name: user?.full_name || `User ID ${userId}`,
         };
       }
-
       try {
         await axios.post(
           "http://localhost:5000/api/send-sms",
           { to: user.phone, message: finalMessage },
           { withCredentials: true }
         );
-        return {
-          // Return success object
-          status: "fulfilled",
-          value: user.full_name || user.email,
-        };
+        return { status: "fulfilled", value: user.full_name || user.email };
       } catch (err) {
         console.error(`Failed to send SMS to ${user.phone}:`, err);
         return {
-          // Return failure object for API error
           status: "failed",
-          reason:
-            err.response?.data?.error || err.message || "Network or API error",
+          reason: err.response?.data?.error || err.message || "API error",
           name: user.full_name || user.email,
         };
       }
@@ -695,13 +694,10 @@ function AdminPage() {
 
     const results = await Promise.allSettled(sendPromises);
 
-    // Process results from Promise.allSettled
     results.forEach((result) => {
-      // Check if the promise itself was fulfilled and the custom status within isn't 'failed'
       if (result.status === "fulfilled" && result.value?.status !== "failed") {
-        successes.push(result.value.value); // Add the name/email from the successful value
+        successes.push(result.value.value);
       } else {
-        // Either the promise was rejected, or it fulfilled but carried a 'failed' status (e.g., missing phone)
         const failureData =
           result.status === "rejected" ? result.reason : result.value;
         failures.push({
@@ -711,31 +707,210 @@ function AdminPage() {
       }
     });
 
-    // Construct feedback message
+    // Construct feedback message using modalMessage
     let feedback = "";
     if (successes.length > 0) {
       feedback += `Successfully sent SMS to ${
         successes.length
-      } user(s): ${successes.join(", ")}. `;
+      }: ${successes.join(", ")}. `;
     }
     if (failures.length > 0) {
-      feedback += `Failed to send SMS to ${failures.length} user(s): ${failures
+      feedback += `Failed to send SMS to ${failures.length}: ${failures
         .map((f) => `${f.name} (${f.reason})`)
         .join(", ")}.`;
     }
+    setModalMessage(feedback.trim() || "SMS processing complete.");
 
-    setMessage(feedback.trim() || "SMS processing complete."); // Fallback message
-
-    // Only close modal if all attempted sends were successful (or if there were only failures due to bad data)
     if (failures.length === 0 && successes.length > 0) {
+      setMessage(feedback.trim()); // Set general message on success before close
       closeModal();
-    } else if (successes.length === 0 && failures.length > 0) {
-      // Keep modal open if all failed (maybe clear recipients list? Up to UX decision)
-      // setSmsRecipients([]); // Optional: Clear recipients on full failure
     }
-    // If mixed results, keep modal open with feedback.
   };
-  // --- SMS Handlers --- END ---
+  // --- END Bulk SMS Handlers ---
+
+  // --- START: Handlers for Unpaid Invoices Modal ---
+
+  const handleInvoiceCheckboxChange = (invoiceId) => {
+    setSelectedInvoiceIds((prevSelected) => {
+      const newSelected = new Set(prevSelected); // Clone the Set
+      if (newSelected.has(invoiceId)) {
+        newSelected.delete(invoiceId); // Use Set's delete method
+      } else {
+        newSelected.add(invoiceId); // Use Set's add method
+      }
+      return newSelected;
+    });
+  };
+
+  const handleSelectAllInvoices = (e) => {
+    if (e.target.checked) {
+      setSelectedInvoiceIds(
+        new Set(unpaidInvoices.map((inv) => inv.invoice_id))
+      ); // Create Set from IDs
+    } else {
+      setSelectedInvoiceIds(new Set()); // Reset to empty Set
+    }
+  };
+
+  // Generic function to send reminders (SMS or Notification)
+  const sendReminders = async (type) => {
+    if (selectedInvoiceIds.size === 0) {
+      // Check Set size
+      setModalMessage("Please select at least one invoice.");
+      return;
+    }
+
+    setModalMessage(`Sending ${type} reminders...`);
+
+    // 1. Get unique user data for selected invoices
+    const usersToRemind = {}; // { user_id: { phone, email, name, total_due, invoice_count } }
+    let overallTotalDue = 0;
+
+    selectedInvoiceIds.forEach((id) => {
+      // Iterate over Set
+      const invoice = unpaidInvoices.find((inv) => inv.invoice_id === id);
+      if (invoice) {
+        if (!usersToRemind[invoice.user_id]) {
+          usersToRemind[invoice.user_id] = {
+            phone: invoice.user_phone,
+            email: invoice.user_email, // Needed for notifications potentially
+            name: invoice.user_full_name,
+            invoice_ids: [], // Store related invoice IDs if needed elsewhere
+            invoice_count: 0,
+            total_due: 0,
+          };
+        }
+        usersToRemind[invoice.user_id].invoice_ids.push(invoice.invoice_id);
+        usersToRemind[invoice.user_id].invoice_count += 1;
+        usersToRemind[invoice.user_id].total_due += invoice.total_amount;
+        overallTotalDue += invoice.total_amount; // Optional: Track overall total selected
+      }
+    });
+
+    const userEntries = Object.entries(usersToRemind); // [ [user_id, userData], ... ]
+    const reminderPromises = [];
+
+    // 2. Prepare and execute API calls
+    userEntries.forEach(([userId, userData]) => {
+      // Replace placeholders in the template from state
+      const finalReminderMessage = reminderMessage
+        .replace(/\{name\}/g, userData.name) // Use regex global flag
+        .replace(/\{total_due\}/g, userData.total_due.toFixed(2))
+        .replace(/\{invoice_count\}/g, userData.invoice_count.toString());
+
+      const finalReminderTitle = reminderTitle // Use state for title
+        .replace(/\{name\}/g, userData.name); // Allow name placeholder in title too
+
+      if (type === "SMS") {
+        if (!userData.phone) {
+          console.warn(
+            `Skipping SMS for user ${userId} (${userData.name}): No phone number.`
+          );
+          reminderPromises.push(
+            Promise.resolve({
+              status: "skipped",
+              reason: "No phone number",
+              name: userData.name || `User ID ${userId}`,
+            })
+          );
+          return; // Skip this user for SMS
+        }
+        const smsPayload = {
+          to: userData.phone,
+          // Add standard prefix/suffix to SMS
+          message: `From Express Auto: ${finalReminderMessage} Reply STOP to unsubscribe.`,
+        };
+        reminderPromises.push(
+          axios
+            .post("http://localhost:5000/api/send-sms", smsPayload, {
+              withCredentials: true,
+            })
+            .then((res) => ({
+              status: "fulfilled",
+              value: userData.name || `User ID ${userId}`,
+            })) // Success object
+            .catch((err) => ({
+              // Failure object
+              status: "failed",
+              reason: err.response?.data?.error || err.message || "API Error",
+              name: userData.name || `User ID ${userId}`,
+            }))
+        );
+      } else if (type === "Notification") {
+        const notificationPayload = {
+          user_id: userId,
+          title: finalReminderTitle, // Use processed title
+          message: finalReminderMessage, // Use processed message
+          type: "invoice_reminder", // Optional: Custom type
+          // related_id: Could link to user's invoice list page? Or first invoice ID?
+        };
+        reminderPromises.push(
+          axios
+            .post(
+              "http://localhost:5000/api/send-notification",
+              notificationPayload,
+              { withCredentials: true }
+            )
+            .then((res) => ({
+              status: "fulfilled",
+              value: userData.name || `User ID ${userId}`,
+            }))
+            .catch((err) => ({
+              status: "failed",
+              reason: err.response?.data?.message || err.message || "API Error",
+              name: userData.name || `User ID ${userId}`,
+            }))
+        );
+      }
+    });
+
+    // 3. Process results
+    const results = await Promise.allSettled(reminderPromises);
+    setModalMessage("Processing results..."); // Intermediate message
+
+    const successes = [];
+    const failures = [];
+    const skips = [];
+
+    results.forEach((result) => {
+      if (result.status === "fulfilled") {
+        const outcome = result.value;
+        if (outcome.status === "fulfilled") successes.push(outcome.value);
+        else if (outcome.status === "failed")
+          failures.push({ name: outcome.name, reason: outcome.reason });
+        else if (outcome.status === "skipped")
+          skips.push({ name: outcome.name, reason: outcome.reason });
+      } else if (result.status === "rejected") {
+        console.error("A reminder promise was rejected:", result.reason);
+        failures.push({
+          name: "Unknown User",
+          reason: result.reason?.message || "Network/Request Error",
+        });
+      }
+    });
+
+    // 4. Construct feedback message
+    let feedback = `Finished sending ${type} reminders. `;
+    if (successes.length > 0)
+      feedback += `Success (${successes.length}): ${successes.join(", ")}. `;
+    if (failures.length > 0)
+      feedback += `Failures (${failures.length}): ${failures
+        .map((f) => `${f.name} (${f.reason})`)
+        .join(", ")}. `;
+    if (skips.length > 0)
+      feedback += `Skipped (${skips.length}): ${skips
+        .map((s) => `${s.name} (${s.reason})`)
+        .join(", ")}. `;
+
+    setModalMessage(feedback.trim());
+
+    // Optional: Clear selection after sending
+    if (successes.length > 0 && failures.length === 0 && skips.length === 0) {
+      // Only clear on full success (no failures/skips)
+      setSelectedInvoiceIds(new Set());
+    }
+  };
+  // --- END: Handlers for Unpaid Invoices Modal ---
 
   // --- JSX Return ---
   return (
@@ -745,20 +920,23 @@ function AdminPage() {
         <div className="admin-box">
           <section className="admin-overview">
             <h1>Admin Panel</h1>
-            <p>Control user accounts and manage services.</p>
+            <p>Manage users, vehicles, invoices, and communications.</p>
           </section>
-          {/* Display message state */}
-          {message && <div className="status-message">{message}</div>}
+          {/* Display general success message state */}
+          {message && <div className="status-message success">{message}</div>}
 
           <section className="admin-actions">
             {/* Buttons */}
             <button onClick={() => openModal("addUser")}>Add User</button>
-            <button onClick={() => openModal("addService")}>Add Service</button>
+            {/* --- UPDATED Button --- */}
+            <button onClick={() => openModal("unpaidInvoices")}>
+              Unpaid Invoices
+            </button>
+            {/* --- END UPDATED Button --- */}
             <button onClick={() => openModal("addLoyaltyPoints")}>
               Add Loyalty Points
             </button>
-            <button onClick={() => openModal("sendSms")}>Send SMS</button>{" "}
-            {/* Send SMS Button */}
+            <button onClick={() => openModal("sendSms")}>Send Bulk SMS</button>
             <button onClick={() => openModal("active-jobs")}>
               Active Jobs
             </button>
@@ -767,7 +945,7 @@ function AdminPage() {
               Update Vehicle Status
             </button>
             <button onClick={() => openModal("sendNotifications")}>
-              Send Notifications
+              Send Notification
             </button>
             <button onClick={() => openModal("sendInvoice")}>
               Create Invoice
@@ -778,25 +956,30 @@ function AdminPage() {
 
       {/* --- Modals --- */}
 
-      {/* Send Notifications Modal */}
+      {/* Send Notifications Modal (Individual) */}
       <Modal
         isOpen={activeModal === "sendNotifications"}
         onRequestClose={closeModal}
-        contentLabel="Send Notification Modal" // Accessibility
+        contentLabel="Send Notification Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container"
       >
         <div className="modal-content">
           <div className="modal-header">
-            <h2>Send Notification</h2>
+            <h2>Send Individual Notification</h2>
             <button
               onClick={closeModal}
               className="modal-close-button"
               aria-label="Close modal"
             >
-              {" "}
-              {/* Added class + aria-label */}
               <X size={20} />
             </button>
           </div>
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <form className="modal-form" onSubmit={handleNotificationSubmit}>
             <select
               value={selectedUser}
@@ -837,6 +1020,8 @@ function AdminPage() {
         isOpen={activeModal === "addUser"}
         onRequestClose={closeModal}
         contentLabel="Add User Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container"
       >
         <div className="modal-content">
           <div className="modal-header">
@@ -846,9 +1031,15 @@ function AdminPage() {
               className="modal-close-button"
               aria-label="Close modal"
             >
-              <X size={20} />
+              {" "}
+              <X size={20} />{" "}
             </button>
           </div>
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <form className="modal-form" onSubmit={handleAddUserSubmit}>
             <input
               type="email"
@@ -881,29 +1072,28 @@ function AdminPage() {
               className="modal-form-input"
             />
             <input
-              type="tel" // Use type="tel" for better mobile UX
-              placeholder="Phone (e.g., +15551234567)" // Add format hint
+              type="tel"
+              placeholder="Phone (e.g., +15551234567)"
               value={newUserPhone}
               onChange={(e) => setNewUserPhone(e.target.value)}
               className="modal-form-input"
-              // Add basic phone validation pattern if desired:
-              // pattern="\+?[1-9]\d{1,14}"
-              // title="Phone number (e.g., +15551234567)"
             />
             <button type="submit">Add User</button>
           </form>
         </div>
       </Modal>
 
-      {/* Add Service Modal */}
+      {/* --- ADDED Unpaid Invoices Modal --- */}
       <Modal
-        isOpen={activeModal === "addService"}
+        isOpen={activeModal === "unpaidInvoices"}
         onRequestClose={closeModal}
-        contentLabel="Add Service Modal"
+        contentLabel="Unpaid Invoices Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container modal-lg" // Apply content style + large variant
       >
         <div className="modal-content">
           <div className="modal-header">
-            <h2>Add Service</h2>
+            <h2>Unpaid Invoices</h2>
             <button
               onClick={closeModal}
               className="modal-close-button"
@@ -912,43 +1102,182 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
-          <form className="modal-form" onSubmit={handleAddServiceSubmit}>
-            <input
-              type="text"
-              placeholder="Service Name"
-              value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
-              required
-              className="modal-form-input"
-            />
-            <textarea
-              placeholder="Service Description"
-              rows="3"
-              value={serviceDescription}
-              onChange={(e) => setServiceDescription(e.target.value)}
-              required
-              className="modal-form-textarea"
-            />
-            <input
-              type="number"
-              placeholder="Service Price"
-              value={servicePrice}
-              step="0.01" // Allow cents
-              min="0" // Prevent negative prices
-              onChange={(e) => setServicePrice(e.target.value)}
-              required
-              className="modal-form-input"
-            />
-            <button type="submit">Add Service</button>
-          </form>
+
+          {/* Display Loading / Error / Content */}
+          {modalMessage && (
+            <div
+              className={`status-message modal-message ${
+                unpaidInvoiceError ? "error" : "info"
+              }`}
+            >
+              {modalMessage}
+            </div>
+          )}
+
+          {isLoadingUnpaidInvoices && (
+            <p style={{ textAlign: "center", margin: "20px" }}>
+              Loading invoices...
+            </p>
+          )}
+
+          {!isLoadingUnpaidInvoices &&
+            !unpaidInvoiceError &&
+            unpaidInvoices.length === 0 && (
+              <p style={{ textAlign: "center", margin: "20px" }}>
+                No unpaid invoices found.
+              </p>
+            )}
+
+          {!isLoadingUnpaidInvoices &&
+            !unpaidInvoiceError &&
+            unpaidInvoices.length > 0 && (
+              <>
+                {/* Reminder Message Customization */}
+                <div className="reminder-config">
+                  <h4>Reminder Settings</h4>
+                  <div className="form-group">
+                    <label htmlFor="reminderTitle">
+                      Notification Title Template:
+                    </label>
+                    <input
+                      type="text"
+                      id="reminderTitle"
+                      className="modal-form-input"
+                      value={reminderTitle}
+                      onChange={(e) => setReminderTitle(e.target.value)}
+                      placeholder="e.g., Unpaid Invoice Reminder for {name}"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="reminderMessage">
+                      Reminder Message Template:
+                    </label>
+                    <textarea
+                      id="reminderMessage"
+                      className="modal-form-textarea"
+                      rows="3"
+                      value={reminderMessage}
+                      onChange={(e) => setReminderMessage(e.target.value)}
+                      placeholder="e.g., Reminder: {invoice_count} invoice(s) totaling ${total_due}."
+                    />
+                    <small>
+                      Use {"{name}"}, {"{total_due}"}, {"{invoice_count}"}{" "}
+                      placeholders.
+                    </small>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div
+                  className="modal-actions"
+                  style={{ marginTop: "15px", marginBottom: "15px" }}
+                >
+                  <button
+                    onClick={() => sendReminders("SMS")}
+                    disabled={
+                      selectedInvoiceIds.size === 0 || isLoadingUnpaidInvoices
+                    }
+                  >
+                    <MessageSquare size={16} style={{ marginRight: "5px" }} />{" "}
+                    Send SMS ({selectedInvoiceIds.size})
+                  </button>
+                  <button
+                    onClick={() => sendReminders("Notification")}
+                    disabled={
+                      selectedInvoiceIds.size === 0 || isLoadingUnpaidInvoices
+                    }
+                  >
+                    <Bell size={16} style={{ marginRight: "5px" }} /> Send
+                    Notification ({selectedInvoiceIds.size})
+                  </button>
+                </div>
+
+                {/* Invoice Table */}
+                <div className="modal-table-container">
+                  <table className="modal-table unpaid-invoices-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          <input
+                            type="checkbox"
+                            onChange={handleSelectAllInvoices}
+                            checked={
+                              selectedInvoiceIds.size ===
+                                unpaidInvoices.length &&
+                              unpaidInvoices.length > 0
+                            }
+                            disabled={
+                              isLoadingUnpaidInvoices ||
+                              unpaidInvoices.length === 0
+                            }
+                            title="Select/Deselect All"
+                          />
+                        </th>
+                        <th>Inv #</th>
+                        <th>User</th>
+                        <th>Amount Due</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Phone</th> {/* Added for visibility */}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unpaidInvoices.map((invoice) => (
+                        <tr key={invoice.invoice_id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedInvoiceIds.has(
+                                invoice.invoice_id
+                              )} // Use Set's has method
+                              onChange={() =>
+                                handleInvoiceCheckboxChange(invoice.invoice_id)
+                              }
+                              disabled={isLoadingUnpaidInvoices}
+                            />
+                          </td>
+                          <td data-label="Inv #">{invoice.invoice_number}</td>
+                          <td data-label="User">
+                            {invoice.user_full_name}
+                            <br />
+                            <small>{invoice.user_email}</small>
+                          </td>
+                          <td data-label="Amount Due">
+                            ${invoice.total_amount.toFixed(2)}
+                          </td>
+                          <td data-label="Due Date">
+                            {invoice.due_date
+                              ? new Date(invoice.due_date).toLocaleDateString()
+                              : "N/A"}
+                          </td>
+                          <td data-label="Status">
+                            <span
+                              className={`status-${invoice.status.toLowerCase()}`}
+                            >
+                              {invoice.status}
+                            </span>
+                          </td>
+                          <td data-label="Phone">
+                            {invoice.user_phone || "N/A"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
         </div>
       </Modal>
+      {/* --- END ADDED Unpaid Invoices Modal --- */}
 
       {/* Add Loyalty Points Modal */}
       <Modal
         isOpen={activeModal === "addLoyaltyPoints"}
         onRequestClose={closeModal}
         contentLabel="Add Loyalty Points Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container"
       >
         <div className="modal-content">
           <div className="modal-header">
@@ -961,14 +1290,18 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
-          {/* Search input for loyalty points */}
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <input
             type="text"
-            className="modal-form-input" // Use consistent class
+            className="modal-form-input"
             placeholder="Search user by name, email, or phone"
             value={loyaltySearchQuery}
             onChange={(e) => setLoyaltySearchQuery(e.target.value)}
-            style={{ marginBottom: "15px" }} // Add spacing if needed
+            style={{ marginBottom: "15px" }}
           />
           <form className="modal-form" onSubmit={handleAddLoyaltyPointsSubmit}>
             <select
@@ -978,11 +1311,9 @@ function AdminPage() {
               className="modal-form-select"
             >
               <option value="">Select User</option>
-              {/* Use filteredUsers based on loyaltySearchQuery */}
               {filteredUsers.map((user) => (
                 <option key={user.user_id} value={user.user_id}>
-                  {user.full_name} ({user.email}){" "}
-                  {/* Maybe add phone here too? */}
+                  {user.full_name} ({user.email})
                 </option>
               ))}
               {filteredUsers.length === 0 && loyaltySearchQuery && (
@@ -994,7 +1325,7 @@ function AdminPage() {
             <input
               type="number"
               placeholder="Points to Add"
-              min="1" // Typically add positive points
+              min="1"
               value={loyaltyPoints}
               onChange={(e) => setLoyaltyPoints(e.target.value)}
               required
@@ -1010,6 +1341,8 @@ function AdminPage() {
         isOpen={activeModal === "updateVehicleStatus"}
         onRequestClose={closeModal}
         contentLabel="Update Vehicle Status Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container"
       >
         <div className="modal-content">
           <div className="modal-header">
@@ -1022,14 +1355,18 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <form
             className="modal-form"
             onSubmit={handleUpdateVehicleStatusSubmit}
           >
-            {/* Dropdown to select a user */}
             <select
               value={selectedUserForVehicleStatus}
-              onChange={handleUserChange} // Use the specific handler
+              onChange={handleUserChangeForVehicleStatus} // Use specific handler
               required
               className="modal-form-select"
             >
@@ -1040,16 +1377,14 @@ function AdminPage() {
                 </option>
               ))}
             </select>
-
-            {/* Dropdown to select a vehicle for the selected user */}
             <select
               value={selectedVehicle ? selectedVehicle.vehicle_id : ""}
-              onChange={handleVehicleChange} // Use the specific handler
+              onChange={handleVehicleChangeForVehicleStatus} // Use specific handler
               required
               disabled={
                 !selectedUserForVehicleStatus ||
                 vehiclesForSelectedUser.length === 0
-              } // Disable if no user or no vehicles
+              }
               className="modal-form-select"
             >
               <option value="">Select Vehicle</option>
@@ -1067,13 +1402,11 @@ function AdminPage() {
                     </option>
                   )}
             </select>
-
-            {/* Dropdown to choose the new status */}
             <select
               value={newVehicleStatus}
               onChange={(e) => setNewVehicleStatus(e.target.value)}
               required
-              disabled={!selectedVehicle} // Disable if no vehicle selected
+              disabled={!selectedVehicle}
               className="modal-form-select"
             >
               <option value="Waiting">Waiting</option>
@@ -1081,21 +1414,24 @@ function AdminPage() {
               <option value="OffLot">OffLot</option>
             </select>
             <button type="submit" disabled={!selectedVehicle}>
-              Update Status
+              {" "}
+              Update Status{" "}
             </button>
           </form>
         </div>
       </Modal>
 
-      {/* Send Invoice Modal */}
+      {/* Create Invoice Modal */}
       <Modal
         isOpen={activeModal === "sendInvoice"}
         onRequestClose={closeModal}
         contentLabel="Create Invoice Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container"
       >
         <div className="modal-content">
           <div className="modal-header">
-            <h2>Create Invoice</h2> {/* Changed title slightly */}
+            <h2>Create Invoice</h2>
             <button
               onClick={closeModal}
               className="modal-close-button"
@@ -1104,7 +1440,11 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
-          {/* Search input similar to loyalty points */}
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <input
             type="text"
             className="modal-form-input"
@@ -1114,7 +1454,6 @@ function AdminPage() {
             style={{ marginBottom: "15px" }}
           />
           <form className="modal-form" onSubmit={handleSendInvoiceSubmit}>
-            {/* User selection dropdown */}
             <select
               value={invoiceSelectedUser}
               onChange={handleInvoiceUserChange} // Specific handler
@@ -1122,7 +1461,6 @@ function AdminPage() {
               className="modal-form-select"
             >
               <option value="">Select User</option>
-              {/* Use filteredInvoiceUsers */}
               {filteredInvoiceUsers.map((user) => (
                 <option key={user.user_id} value={user.user_id}>
                   {user.full_name} ({user.email})
@@ -1134,8 +1472,6 @@ function AdminPage() {
                 </option>
               )}
             </select>
-
-            {/* Vehicle selection dropdown */}
             <select
               value={invoiceVehicleId}
               onChange={handleInvoiceVehicleChange} // Specific handler
@@ -1157,10 +1493,6 @@ function AdminPage() {
                     </option>
                   )}
             </select>
-
-            {/* Removed Hidden email field */}
-            {/* Removed Invoice Number input field */}
-
             <input
               type="number"
               placeholder="Subtotal"
@@ -1209,6 +1541,7 @@ function AdminPage() {
               <option value="unpaid">Unpaid</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
+              <option value="draft">Draft</option> {/* Added Draft */}
             </select>
             <input
               type="date"
@@ -1235,6 +1568,8 @@ function AdminPage() {
         isOpen={activeModal === "viewPhotos"}
         onRequestClose={closeModal}
         contentLabel="View Vehicle Photos Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container modal-lg" // Use large variant
       >
         <div className="modal-content">
           <div className="modal-header">
@@ -1247,11 +1582,12 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
-
-          {/* Form for selecting user and vehicle */}
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <form className="modal-form" style={{ marginBottom: "20px" }}>
-            {" "}
-            {/* Added margin */}
             <select
               value={selectedUserForPhotos}
               onChange={handleUserForPhotosChange} // Specific handler
@@ -1288,13 +1624,12 @@ function AdminPage() {
                   )}
             </select>
           </form>
-
-          {/* Photo Grid Display - Includes ExternalLink */}
           <div className="photo-grid">
             {vehiclePhotos.length > 0
               ? vehiclePhotos.map((photo) => (
-                  <div key={photo.media_id}>
-                    {/* Image linked to S3 URL */}
+                  <div key={photo.media_id} className="photo-item">
+                    {" "}
+                    {/* Added class */}
                     <a
                       href={photo.file_url}
                       target="_blank"
@@ -1305,42 +1640,31 @@ function AdminPage() {
                         alt={photo.title || "Vehicle photo"}
                       />
                     </a>
-
-                    {/* Container for Caption and Link Icon */}
                     <div className="photo-caption-container">
-                      {" "}
-                      {/* Use this class for styling */}
-                      {/* Display title if available */}
                       {photo.title && (
                         <span className="photo-caption">{photo.title}</span>
                       )}
-                      {/* --- Link Icon --- */}
                       <a
                         href={photo.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Open image link in new tab" // Tooltip for accessibility
-                        className="photo-link-icon" // Class for styling
+                        title="Open image link"
+                        className="photo-link-icon"
                       >
-                        <ExternalLink size={14} strokeWidth={2.5} />{" "}
-                        {/* Adjust size/stroke as needed */}
+                        <ExternalLink size={14} strokeWidth={2.5} />
                       </a>
-                      {/* --- End Link Icon --- */}
                     </div>
-                    {/* Optional: Display description separately if needed */}
-                    {/* {photo.description && <div className="photo-description">{photo.description}</div>} */}
-
-                    {/* Status display - requires backend to provide status per photo */}
-                    {/* <div className="photo-status">Status: {photo.status || "N/A"}</div> */}
+                    {/* Optional Description display */}
+                    {/* {photo.description && <p className="photo-description">{photo.description}</p>} */}
                   </div>
                 ))
-              : selectedVehicleForPhotos && (
+              : selectedVehicleForPhotos &&
+                !modalMessage.startsWith("Loading") && ( // Don't show "No photos" while loading
                   <p>No photos found for this vehicle.</p>
                 )}
             {!selectedVehicleForPhotos && selectedUserForPhotos && (
               <p>Please select a vehicle to view photos.</p>
             )}
-            {/* Message if no user is selected */}
             {!selectedUserForPhotos && (
               <p>Please select a user and vehicle to view photos.</p>
             )}
@@ -1348,15 +1672,17 @@ function AdminPage() {
         </div>
       </Modal>
 
-      {/* --- Send SMS Modal (Refactored with Search and Add Dropdown) --- */}
+      {/* Send Bulk SMS Modal */}
       <Modal
         isOpen={activeModal === "sendSms"}
         onRequestClose={closeModal}
-        contentLabel="Send SMS Message Modal"
+        contentLabel="Send Bulk SMS Message Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container"
       >
         <div className="modal-content">
           <div className="modal-header">
-            <h2>Send SMS Message</h2>
+            <h2>Send Bulk SMS Message</h2>
             <button
               onClick={closeModal}
               className="modal-close-button"
@@ -1365,30 +1691,31 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
-
-          {/* Search Input */}
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           <input
             type="text"
             placeholder="Search users by name, email, phone..."
             value={smsSearchQuery}
             onChange={(e) => setSmsSearchQuery(e.target.value)}
-            className="modal-form-input" // Use consistent class
-            style={{ marginBottom: "15px" }} // Add spacing
+            className="modal-form-input"
+            style={{ marginBottom: "15px" }}
           />
-
           <form className="modal-form" onSubmit={handleSendSmsSubmit}>
-            {/* --- Recipient ADD Dropdown --- */}
             <select
               onChange={handleSmsUserSelectToAdd}
-              value="" // Keep value fixed to "" to act as a trigger
-              className="modal-form-select" // Use consistent class
-              aria-label="Add SMS Recipient" // Accessibility
+              value=""
+              className="modal-form-select"
+              aria-label="Add SMS Recipient"
             >
               <option value="">-- Add Recipient --</option>
               {filteredSmsUsersForDropdown.length > 0 ? (
                 filteredSmsUsersForDropdown.map((user) => (
                   <option key={user.user_id} value={user.user_id}>
-                    {user.full_name} ({user.phone}) {/* Display phone */}
+                    {user.full_name} ({user.phone})
                   </option>
                 ))
               ) : (
@@ -1399,10 +1726,8 @@ function AdminPage() {
                 </option>
               )}
             </select>
-
-            {/* --- Display Selected Recipients --- */}
             <div
-              className="sms-selected-recipients" // Add a class for potential styling
+              className="sms-selected-recipients"
               style={{ marginTop: "10px", marginBottom: "15px" }}
             >
               <strong style={{ display: "block", marginBottom: "5px" }}>
@@ -1413,62 +1738,33 @@ function AdminPage() {
                   style={{
                     fontStyle: "italic",
                     color: "#666",
-                    margin: "5px 0 0 0", // Adjust margin
+                    margin: "5px 0 0 0",
                   }}
                 >
                   No recipients added yet.
                 </p>
               ) : (
-                <ul
-                  style={{
-                    // Basic styling for the list
-                    listStyle: "none",
-                    paddingLeft: 0,
-                    marginTop: "5px",
-                    maxHeight: "150px", // Limit height and make scrollable
-                    overflowY: "auto",
-                    border: "1px solid #eee", // Visual separation
-                    borderRadius: "4px",
-                    padding: "10px",
-                  }}
-                >
+                <ul className="recipient-list">
+                  {" "}
+                  {/* Added class */}
                   {smsRecipients.map((userId) => {
                     const user = users.find((u) => u.user_id === userId);
-                    // Basic check in case user data is somehow missing briefly
                     if (!user) return <li key={userId}>Loading user...</li>;
                     return (
-                      <li
-                        key={userId}
-                        style={{
-                          // Style for each recipient item
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "6px 5px",
-                          borderBottom: "1px solid #eee", // Separator line
-                        }}
-                      >
-                        <span style={{ fontSize: "0.9rem" }}>
+                      <li key={userId} className="recipient-item">
+                        {" "}
+                        {/* Added class */}
+                        <span>
                           {user.full_name} ({user.phone})
                         </span>
                         <button
-                          type="button" // Prevent form submission
+                          type="button"
                           onClick={() => handleRemoveSmsRecipient(userId)}
                           title={`Remove ${user.full_name}`}
-                          className="remove-recipient-button" // Add class for styling
-                          aria-label={`Remove ${user.full_name} from recipients`}
-                          style={{
-                            // Simple styling for remove button
-                            background: "none",
-                            border: "none",
-                            color: "#dc3545", // Danger color
-                            cursor: "pointer",
-                            fontSize: "1.2rem", // Make 'x' larger
-                            padding: "0 5px",
-                            lineHeight: "1",
-                          }}
+                          className="remove-recipient-button"
+                          aria-label={`Remove ${user.full_name}`}
                         >
-                          &times; {/* Simple 'x' character */}
+                          &times;
                         </button>
                       </li>
                     );
@@ -1476,18 +1772,14 @@ function AdminPage() {
                 </ul>
               )}
             </div>
-
-            {/* Message Input */}
             <textarea
               placeholder="Enter your message content here... 'From Express Auto:' and 'Reply STOP...' will be added automatically."
               rows="4"
               value={smsMessage}
               onChange={(e) => setSmsMessage(e.target.value)}
               required
-              className="modal-form-textarea" // Use consistent class
+              className="modal-form-textarea"
             />
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={smsRecipients.length === 0 || !smsMessage.trim()}
@@ -1495,16 +1787,16 @@ function AdminPage() {
               Send SMS to {smsRecipients.length} User(s)
             </button>
           </form>
-          {/* Optional: Display API feedback message inside modal */}
-          {/* {message && <div className="status-message" style={{marginTop: '15px'}}>{message}</div>} */}
         </div>
       </Modal>
-      {/* --- End Send SMS Modal --- */}
-      {/* --- Active Job Modal---*/}
+
+      {/* Active Jobs Modal */}
       <Modal
         isOpen={activeModal === "active-jobs"}
         onRequestClose={closeModal}
         contentLabel="Active Jobs Modal"
+        overlayClassName="modal-overlay"
+        className="modal-content-container modal-lg" // Use large variant
       >
         <div className="modal-content">
           <div className="modal-header">
@@ -1517,7 +1809,11 @@ function AdminPage() {
               <X size={20} />
             </button>
           </div>
-
+          {modalMessage && (
+            <div className="status-message modal-message info">
+              {modalMessage}
+            </div>
+          )}
           {activeJobs.length > 0 ? (
             <div className="modal-table-container">
               <table className="modal-table">
@@ -1544,10 +1840,13 @@ function AdminPage() {
               </table>
             </div>
           ) : (
-            <p>No active jobs found.</p>
+            <p style={{ textAlign: "center", margin: "20px" }}>
+              No active jobs found.
+            </p>
           )}
         </div>
       </Modal>
+
       <Footer />
     </>
   );
