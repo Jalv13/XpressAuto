@@ -1177,11 +1177,9 @@ function AdminPage() {
               className="modal-form-select"
             >
               <option value="">Select Status</option>
-              <option value="draft">Draft</option> {/* Added draft */}
               <option value="unpaid">Unpaid</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
-              <option value="void">Void</option> {/* Added void */}
             </select>
             <input
               type="date"

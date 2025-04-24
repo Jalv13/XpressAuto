@@ -1403,31 +1403,6 @@ function Dashboard() {
 
           <h2>Your Invoices</h2>
 
-          {/* Display messages (loading, error, success) */}
-          {message && (
-            <p
-              style={{
-                textAlign: "center",
-                margin: "10px 0",
-                padding: "8px",
-                borderRadius: "4px",
-                backgroundColor:
-                  message.includes("error") ||
-                  message.includes("Failed") ||
-                  message.includes("issue")
-                    ? "#f8d7da"
-                    : "#d1ecf1",
-                color:
-                  message.includes("error") ||
-                  message.includes("Failed") ||
-                  message.includes("issue")
-                    ? "#721c24"
-                    : "#0c5460",
-              }}
-            >
-              {message}
-            </p>
-          )}
           {/* Check specifically for message existence before rendering */}
           {message && (
             <p
@@ -1498,7 +1473,6 @@ function Dashboard() {
                     `Should Show Form:`,
                     shouldShowForm
                   );
-                  // --- End Debugging Log ---
 
                   // Now, return the JSX for the table row
                   return (
