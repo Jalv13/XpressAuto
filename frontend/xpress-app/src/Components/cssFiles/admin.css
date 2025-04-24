@@ -215,7 +215,20 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3); /* Focus ring matching theme */
 }
-
+.modal-form-input,
+.modal-form-select,
+.modal-form-textarea {
+  width: 100%; /* Fill container width */
+  padding: 12px 15px; /* Generous padding (top/bottom, left/right) */
+  border: 1px solid #ccc; /* Standard light grey border */
+  border-radius: 5px; /* Slightly rounded corners */
+  font-size: 1rem; /* Default font size */
+  line-height: 1.4; /* Improve readability */
+  background-color: #fff; /* Ensure white background */
+  box-sizing: border-box; /* Include padding/border in width calculation */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Smooth focus transition */
+  /* margin-bottom: 0; */ /* **Remove margin if using 'gap' on .modal-form** */
+}
 .modal-form textarea {
   min-height: 80px; /* Minimum height for textareas */
   resize: vertical; /* Allow vertical resize */
