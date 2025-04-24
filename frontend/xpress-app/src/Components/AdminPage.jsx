@@ -3,14 +3,12 @@ import { Link } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import Modal from "react-modal";
-import { X } from "lucide-react";
+import { X, ExternalLink } from "lucide-react"; // Added ExternalLink
 import axios from "axios";
-import "./cssFiles/PossibleDeadCSS.css";
+import "./cssFiles/PossibleDeadCSS.css"; // Keep if relevant
 import "./cssFiles/admin.css";
 
-// Combined admin styles with modal-specific styles appended
-
-Modal.setAppElement("#root");
+Modal.setAppElement("#root"); // Ensure this runs for accessibility
 
 function AdminPage() {
   // Main modal state
@@ -19,7 +17,7 @@ function AdminPage() {
 
   // Shared data
   const [users, setUsers] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicles, setVehicles] = useState([]); // Keep if needed by other modals, e.g., Invoice
 
   // Send Notifications state
   const [selectedUser, setSelectedUser] = useState("");
@@ -46,15 +44,14 @@ function AdminPage() {
   // Update Vehicle Status state
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [newVehicleStatus, setNewVehicleStatus] = useState("OffLot");
-  // New states for vehicle status modal: user selection and that user’s vehicles
   const [selectedUserForVehicleStatus, setSelectedUserForVehicleStatus] =
     useState("");
   const [vehiclesForSelectedUser, setVehiclesForSelectedUser] = useState([]);
 
   // Send Invoice state
-  const [invoiceEmail, setInvoiceEmail] = useState("");
+  const [invoiceEmail, setInvoiceEmail] = useState(""); // Can likely be removed if backend uses user_id
   const [invoiceVehicleId, setInvoiceVehicleId] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState(""); // Assuming backend generates this now
   const [subtotal, setSubtotal] = useState("");
   const [taxAmount, setTaxAmount] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
@@ -63,19 +60,19 @@ function AdminPage() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
 
-  //Invoice State
+  // Invoice State - Specific
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState("");
   const [invoiceSelectedUser, setInvoiceSelectedUser] = useState("");
   const [vehiclesForInvoice, setVehiclesForInvoice] = useState([]);
-  const [isLoadingInvoiceNumber, setIsLoadingInvoiceNumber] = useState(false);
+  const [isLoadingInvoiceNumber, setIsLoadingInvoiceNumber] = useState(false); // Keep if still relevant
 
-  //Selected user for photos
+  // Selected user for photos state
   const [selectedUserForPhotos, setSelectedUserForPhotos] = useState("");
   const [vehiclesForPhotos, setVehiclesForPhotos] = useState([]);
   const [selectedVehicleForPhotos, setSelectedVehicleForPhotos] = useState("");
   const [vehiclePhotos, setVehiclePhotos] = useState([]);
 
-  //Sms
+  // Send SMS state
   const [smsRecipients, setSmsRecipients] = useState([]); // Array of user_ids
   const [smsMessage, setSmsMessage] = useState("");
   const [smsSearchQuery, setSmsSearchQuery] = useState(""); // For filtering users
@@ -83,24 +80,38 @@ function AdminPage() {
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
-    setMessage("");
+    setMessage(""); // Clear previous messages
     if (
       modalName === "sendNotifications" ||
       modalName === "addLoyaltyPoints" ||
       modalName === "updateVehicleStatus" ||
       modalName === "sendInvoice" ||
-      modalName === "viewPhotos"
+      modalName === "viewPhotos" ||
+      modalName === "sendSms" // Added sendSms here
     ) {
-      // Fetch users for these modals
+      // Fetch users if needed for these modals
+      // IMPORTANT: Ensure the backend /api/get-users returns phone numbers!
       axios
         .get("http://localhost:5000/api/get-users", { withCredentials: true })
         .then((res) => {
           if (res.data.status === "success") {
+            // Assuming res.data.users now contains 'phone' field
             setUsers(res.data.users);
+          } else {
+            console.error("Failed to fetch users:", res.data.message);
+            setMessage(
+              `Error loading users: ${res.data.message || "Unknown error"}`
+            );
           }
         })
-        .catch((err) => console.error("Error fetching users:", err));
+        .catch((err) => {
+          console.error("Error fetching users:", err);
+          setMessage(
+            `Error loading users: ${err.response?.data?.message || err.message}`
+          );
+        });
     }
+    // Add specific data fetching for other modals if necessary
   };
 
   const closeModal = () => {
@@ -121,7 +132,7 @@ function AdminPage() {
     setLoyaltySearchQuery("");
     setLoyaltySelectedUser("");
     setLoyaltyPoints("");
-    setVehicleSearchQuery("");
+    // setVehicleSearchQuery(""); // Removed as it wasn't defined/used
     setSelectedVehicle(null);
     setNewVehicleStatus("OffLot");
     setSelectedUserForVehicleStatus("");
@@ -136,50 +147,112 @@ function AdminPage() {
     setInvoiceStatus("");
     setDueDate("");
     setNotes("");
+    setInvoiceSearchQuery("");
+    setInvoiceSelectedUser("");
+    setVehiclesForInvoice([]);
+    setSelectedUserForPhotos("");
+    setVehiclesForPhotos([]);
+    setSelectedVehicleForPhotos("");
+    setVehiclePhotos([]);
+    // --- Reset SMS state ---
     setSmsRecipients([]);
     setSmsMessage("");
-    setSmsSearchQuery("");
+    setSmsSearchQuery(""); // Reset SMS search query
   };
 
-  // Handlers for form submissions
+  // --- Filtering Logic ---
+
+  // Filter for Loyalty Points
+  const filteredUsers = users.filter((user) => {
+    const query = loyaltySearchQuery.toLowerCase();
+    // Basic check if properties exist before calling toLowerCase
+    const nameMatch = user.full_name?.toLowerCase().includes(query) || false;
+    const emailMatch = user.email?.toLowerCase().includes(query) || false;
+    const phoneMatch = user.phone?.toLowerCase().includes(query) || false;
+    return nameMatch || emailMatch || phoneMatch;
+  });
+
+  // Filter for Invoice Users
+  const filteredInvoiceUsers = users.filter((user) => {
+    const query = invoiceSearchQuery.toLowerCase();
+    const nameMatch = user.full_name?.toLowerCase().includes(query) || false;
+    const emailMatch = user.email?.toLowerCase().includes(query) || false;
+    const phoneMatch = user.phone?.toLowerCase().includes(query) || false;
+    return nameMatch || emailMatch || phoneMatch;
+  });
+
+  // Filter for SMS Dropdown Options (Similar to others, but also checks phone and excludes selected)
+  const filteredSmsUsersForDropdown = users.filter((user) => {
+    const query = smsSearchQuery.toLowerCase();
+    const hasPhone = !!user.phone; // Ensure phone number exists and is not empty
+
+    // Check if user matches the search query
+    const matchesQuery =
+      hasPhone &&
+      (user.full_name?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        user.phone?.toLowerCase().includes(query));
+
+    // Check if the user is already in the recipients list
+    const isAlreadySelected = smsRecipients.includes(user.user_id);
+
+    return matchesQuery && !isAlreadySelected; // Must match query, have phone, and not be selected
+  });
+
+  // --- Handlers for form submissions & changes ---
+
+  // Invoice Handlers
   const handleInvoiceUserChange = (e) => {
     const userId = e.target.value;
     setInvoiceSelectedUser(userId);
-    setInvoiceEmail(
-      users.find((user) => user.user_id === parseInt(userId))?.email || ""
+    // Find user details - assuming 'users' state is populated
+    const selectedUserDetails = users.find(
+      (user) => user.user_id === parseInt(userId)
     );
+    setInvoiceEmail(selectedUserDetails?.email || ""); // Keep if needed, otherwise remove
+    setInvoiceVehicleId(""); // Reset vehicle when user changes
+    setVehiclesForInvoice([]); // Clear old vehicles
 
     // Fetch vehicles for the selected user
-    axios
-      .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.status === "success") {
-          setVehiclesForInvoice(res.data.vehicles);
-        }
-      })
-      .catch((err) =>
-        console.error("Error fetching vehicles for invoice:", err)
-      );
+    if (userId) {
+      axios
+        .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
+          withCredentials: true,
+        })
+        .then((res) => {
+          if (res.data.status === "success") {
+            setVehiclesForInvoice(res.data.vehicles);
+          } else {
+            setMessage(
+              `Error fetching vehicles for invoice: ${
+                res.data.message || "Unknown error"
+              }`
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching vehicles for invoice:", err);
+          setMessage(
+            `Error fetching vehicles: ${
+              err.response?.data?.message || err.message
+            }`
+          );
+        });
+    }
   };
 
-  // Add this handler for vehicle selection
   const handleInvoiceVehicleChange = (e) => {
     setInvoiceVehicleId(e.target.value);
   };
-  //search users in invoice modal
-  const filteredInvoiceUsers = users.filter((user) => {
-    const query = invoiceSearchQuery.toLowerCase();
-    return (
-      user.full_name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      (user.phone && user.phone.toLowerCase().includes(query))
-    );
-  });
 
+  // Notification Submit
   const handleNotificationSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedUser) {
+      setMessage("Please select a user.");
+      return;
+    }
+    setMessage("Sending notification..."); // Indicate processing
     try {
       const res = await axios.post(
         "http://localhost:5000/api/send-notification",
@@ -194,84 +267,134 @@ function AdminPage() {
         setMessage("Notification sent!");
         closeModal();
       } else {
-        setMessage("Failed to send notification.");
+        setMessage(
+          `Failed to send notification: ${res.data.message || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Send notification error:", err);
-      setMessage("An error occurred.");
+      setMessage(
+        `An error occurred: ${err.response?.data?.message || err.message}`
+      );
     }
   };
 
+  // Add User Submit
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
+    setMessage("Adding user...");
     try {
-      const res = await axios.post("http://localhost:5000/api/add-user", {
-        email: newUserEmail,
-        password: newUserPassword,
-        first_name: newUserFirstName,
-        last_name: newUserLastName,
-        phone: newUserPhone,
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/add-user",
+        {
+          email: newUserEmail,
+          password: newUserPassword,
+          first_name: newUserFirstName,
+          last_name: newUserLastName,
+          phone: newUserPhone,
+        },
+        { withCredentials: true }
+      ); // Assume admin needs auth? Adjust if not.
       if (res.data.status === "success") {
         setMessage("User added successfully!");
         closeModal();
+        // Optionally refresh user list if needed immediately
+        // openModal(activeModal); // This might re-fetch users
       } else {
-        setMessage("Failed to add user.");
+        setMessage(
+          `Failed to add user: ${res.data.message || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Add user error:", err);
-      setMessage("An error occurred while adding user.");
+      setMessage(
+        `An error occurred while adding user: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
   };
 
+  // Add Service Submit
   const handleAddServiceSubmit = async (e) => {
     e.preventDefault();
+    setMessage("Adding service...");
     try {
-      // Assuming an endpoint /api/add-service will be implemented
-      const res = await axios.post("http://localhost:5000/api/add-service", {
-        service_name: serviceName,
-        service_description: serviceDescription,
-        service_price: servicePrice,
-      });
+      // Assuming an endpoint /api/add-service exists and requires auth
+      const res = await axios.post(
+        "http://localhost:5000/api/add-service",
+        {
+          service_name: serviceName,
+          service_description: serviceDescription,
+          service_price: servicePrice,
+        },
+        { withCredentials: true }
+      ); // Assume admin needs auth
       if (res.data.status === "success") {
         setMessage("Service added successfully!");
         closeModal();
       } else {
-        setMessage("Failed to add service.");
+        setMessage(
+          `Failed to add service: ${res.data.message || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Add service error:", err);
-      setMessage("An error occurred while adding service.");
+      setMessage(
+        `An error occurred while adding service: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
   };
 
+  // Add Loyalty Points Submit
   const handleAddLoyaltyPointsSubmit = async (e) => {
     e.preventDefault();
+    if (!loyaltySelectedUser) {
+      setMessage("Please select a user.");
+      return;
+    }
+    if (!loyaltyPoints || loyaltyPoints <= 0) {
+      setMessage("Please enter a valid number of points to add.");
+      return;
+    }
+    setMessage("Adding points...");
     try {
       const res = await axios.post(
         "http://localhost:5000/api/add-loyalty-points",
         {
           user_id: loyaltySelectedUser,
           points: loyaltyPoints,
-        }
+        },
+        { withCredentials: true } // Ensure admin auth is sent
       );
       if (res.data.status === "success") {
         setMessage("Loyalty points added!");
         closeModal();
       } else {
-        setMessage("Failed to add loyalty points.");
+        setMessage(
+          `Failed to add loyalty points: ${res.data.message || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Loyalty points error:", err);
-      setMessage("An error occurred while adding loyalty points.");
+      setMessage(
+        `An error occurred while adding loyalty points: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
   };
+
+  // Update Vehicle Status Submit
   const handleUpdateVehicleStatusSubmit = async (e) => {
     e.preventDefault();
     if (!selectedVehicle) {
       setMessage("Please select a vehicle.");
       return;
     }
+    setMessage("Updating status...");
     try {
       const res = await axios.put(
         `http://localhost:5000/api/update-vehicle-status/${selectedVehicle.vehicle_id}`,
@@ -282,153 +405,211 @@ function AdminPage() {
         setMessage("Vehicle status updated!");
         closeModal();
       } else {
-        setMessage("Failed to update vehicle status.");
+        setMessage(
+          `Failed to update vehicle status: ${
+            res.data.message || "Unknown error"
+          }`
+        );
       }
     } catch (err) {
       console.error("Update vehicle status error:", err);
-      setMessage("An error occurred while updating vehicle status.");
+      setMessage(
+        `An error occurred while updating vehicle status: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
   };
 
+  // Send Invoice Submit
   const handleSendInvoiceSubmit = async (e) => {
     e.preventDefault();
+    // Basic validation
+    if (
+      !invoiceSelectedUser ||
+      !invoiceVehicleId ||
+      !totalAmount ||
+      !invoiceStatus ||
+      !dueDate
+    ) {
+      setMessage(
+        "Please fill in all required invoice fields (User, Vehicle, Total, Status, Due Date)."
+      );
+      return;
+    }
+    setMessage("Creating invoice...");
     try {
-      const res = await axios.post("http://localhost:5000/api/create-invoice", {
-        email: invoiceEmail,
-        vehicle_id: invoiceVehicleId,
-        invoice_number: invoiceNumber,
-        subtotal,
-        tax_amount: taxAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        status: invoiceStatus,
-        due_date: dueDate,
-        notes,
-        items: [],
-      });
+      // Assuming backend generates invoice_number
+      const res = await axios.post(
+        "http://localhost:5000/api/create-invoice",
+        {
+          // Send user_id if backend expects it
+          user_id: invoiceSelectedUser,
+          vehicle_id: invoiceVehicleId,
+          subtotal,
+          tax_amount: taxAmount || 0, // Default tax/discount to 0 if empty
+          discount_amount: discountAmount || 0,
+          total_amount: totalAmount,
+          status: invoiceStatus,
+          due_date: dueDate,
+          notes,
+          items: [], // Assuming items are added separately or not via this form
+        },
+        { withCredentials: true }
+      ); // Assume admin needs auth
+
       if (res.data.status === "success") {
-        setMessage("Invoice created!");
+        setMessage(
+          `Invoice ${res.data.invoice_number || ""} created successfully!`
+        );
         closeModal();
       } else {
-        setMessage("Failed to create invoice.");
+        setMessage(
+          `Failed to create invoice: ${res.data.message || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Send invoice error:", err);
-      setMessage("An error occurred while sending invoice.");
+      setMessage(
+        `An error occurred while creating invoice: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
   };
 
-  // Handler for when an admin selects a user in the vehicle status modal
+  // Vehicle Status Handlers
   const handleUserChange = (e) => {
+    // Renamed from generic handleUserChange for clarity
     const userId = e.target.value;
     setSelectedUserForVehicleStatus(userId);
-    // Fetch vehicles for the selected user from the backend endpoint
-    axios
-      .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.status === "success") {
-          setVehiclesForSelectedUser(res.data.vehicles);
-        }
-      })
-      .catch((err) => console.error("Error fetching vehicles for user:", err));
+    // Reset vehicle selection when user changes
+    setSelectedVehicle(null);
+    setVehiclesForSelectedUser([]);
+    if (userId) {
+      // Fetch vehicles for the selected user
+      axios
+        .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
+          withCredentials: true,
+        })
+        .then((res) => {
+          if (res.data.status === "success") {
+            setVehiclesForSelectedUser(res.data.vehicles);
+          } else {
+            setMessage(
+              `Error fetching vehicles: ${res.data.message || "Unknown error"}`
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching vehicles for user:", err);
+          setMessage(
+            `Error fetching vehicles: ${
+              err.response?.data?.message || err.message
+            }`
+          );
+        });
+    }
   };
 
-  // Handler for when an admin selects a vehicle from the fetched list
   const handleVehicleChange = (e) => {
+    // Renamed from generic handleVehicleChange
     const vehicleId = Number(e.target.value);
     const vehicle = vehiclesForSelectedUser.find(
       (v) => v.vehicle_id === vehicleId
     );
     setSelectedVehicle(vehicle);
-  };
-
-  // Client-side filtering for loyalty points user search
-  const filteredUsers = users.filter((user) => {
-    const query = loyaltySearchQuery.toLowerCase();
-    return (
-      user.full_name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      (user.phone && user.phone.toLowerCase().includes(query))
-    );
-  });
-
-  const handleSmsRecipientChange = (e) => {
-    const userId = parseInt(e.target.value, 10);
-    const isChecked = e.target.checked;
-
-    if (isChecked) {
-      // Add user ID if checked and not already present
-      setSmsRecipients((prevRecipients) =>
-        prevRecipients.includes(userId)
-          ? prevRecipients
-          : [...prevRecipients, userId]
-      );
-    } else {
-      // Remove user ID if unchecked
-      setSmsRecipients((prevRecipients) =>
-        prevRecipients.filter((id) => id !== userId)
-      );
+    // Optionally set the status dropdown to the vehicle's current status
+    if (vehicle) {
+      setNewVehicleStatus(vehicle.vehicle_status || "OffLot");
     }
   };
 
-  const filteredSmsUsers = users.filter((user) => {
-    const query = smsSearchQuery.toLowerCase();
-    // Ensure user has a phone number to be selectable for SMS
-    return (
-      user.phone &&
-      (user.full_name?.toLowerCase().includes(query) ||
-        user.email?.toLowerCase().includes(query) ||
-        user.phone?.toLowerCase().includes(query))
-    );
-  });
-
-  // Filter vehicles based on license plate query (if needed elsewhere)
-  // const filteredVehicles = vehicles.filter((vehicle) => {
-  //   const query = vehicleSearchQuery.toLowerCase();
-  //   return (
-  //     vehicle.license_plate &&
-  //     vehicle.license_plate.toLowerCase().includes(query)
-  //   );
-  // });
-
-  // Handler for when an admin selects a user in the view photos modal
+  // View Photos Handlers
   const handleUserForPhotosChange = (e) => {
     const userId = e.target.value;
     setSelectedUserForPhotos(userId);
+    // Reset vehicle and photos when user changes
     setSelectedVehicleForPhotos("");
     setVehiclePhotos([]);
-    axios
-      .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.status === "success") {
-          setVehiclesForPhotos(res.data.vehicles);
-        }
-      });
+    setVehiclesForPhotos([]);
+    if (userId) {
+      axios
+        .get(`http://localhost:5000/api/get-vehicles/${userId}`, {
+          withCredentials: true,
+        })
+        .then((res) => {
+          if (res.data.status === "success") {
+            setVehiclesForPhotos(res.data.vehicles);
+          } else {
+            setMessage(
+              `Error fetching vehicles for photos: ${
+                res.data.message || "Unknown error"
+              }`
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching vehicles for photos:", err);
+          setMessage(
+            `Error fetching vehicles: ${
+              err.response?.data?.message || err.message
+            }`
+          );
+        });
+    }
   };
-  // Handler for when an admin selects a vehicle in the view photos modal
+
   const handleVehicleForPhotosChange = (e) => {
     const vehicleId = e.target.value;
     setSelectedVehicleForPhotos(vehicleId);
-    axios
-      .get(`http://localhost:5000/api/get-vehicle-photos/${vehicleId}`, {
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.status === "success") {
-          setVehiclePhotos(
-            res.data.photos.map((photo) => ({
-              ...photo,
-              status: res.data.vehicle_status, // assuming backend sends this
-            }))
+    setVehiclePhotos([]); // Clear previous photos
+    if (vehicleId) {
+      axios
+        .get(`http://localhost:5000/api/get-vehicle-photos/${vehicleId}`, {
+          withCredentials: true, // Assuming admin needs to be logged in
+        })
+        .then((res) => {
+          if (res.data.status === "success") {
+            // Assuming the backend's /api/get-vehicle-photos only returns photo details (media_id, file_url, title, etc.)
+            setVehiclePhotos(res.data.photos);
+            // If status per photo is needed, the backend endpoint must provide it.
+            // Example if backend provided vehicle_status at top level:
+            // const status = res.data.vehicle_status;
+            // setVehiclePhotos(res.data.photos.map(p => ({ ...p, status })));
+          } else {
+            setMessage(
+              `Error fetching photos: ${res.data.message || "Unknown error"}`
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching vehicle photos:", err);
+          setMessage(
+            `Error fetching photos: ${
+              err.response?.data?.message || err.message
+            }`
           );
-        }
-      });
+        });
+    }
   };
-  //sms handler
+
+  // --- SMS Handlers --- START ---
+  const handleSmsUserSelectToAdd = (e) => {
+    const userId = parseInt(e.target.value, 10);
+    if (userId && !smsRecipients.includes(userId)) {
+      // Check if valid ID and not already added
+      setSmsRecipients((prev) => [...prev, userId]);
+    }
+    // The select value is fixed to "", so no need to reset e.target.value here
+    // Clearing the search query might be helpful, or not, depending on UX preference
+    // setSmsSearchQuery("");
+  };
+
+  const handleRemoveSmsRecipient = (userIdToRemove) => {
+    setSmsRecipients((prev) => prev.filter((id) => id !== userIdToRemove));
+  };
+
   const handleSendSmsSubmit = async (e) => {
     e.preventDefault();
 
@@ -447,37 +628,59 @@ function AdminPage() {
     const failures = [];
     const finalMessage = `From Express Auto: ${smsMessage} Reply STOP to stop receiving texts.`;
 
-    for (const userId of smsRecipients) {
+    // Using Promise.allSettled to send messages concurrently and collect all results
+    const sendPromises = smsRecipients.map(async (userId) => {
       const user = users.find((u) => u.user_id === userId);
 
       if (!user || !user.phone) {
-        failures.push({
-          name: user?.full_name || `User ID ${userId}`,
+        return {
+          // Return failure object for missing phone
+          status: "failed",
           reason: "Missing or invalid phone number in profile",
-        });
-        continue; // Skip this user
+          name: user?.full_name || `User ID ${userId}`,
+        };
       }
 
       try {
-        // Assuming '/api/send-sms' takes 'to' and 'message'
         await axios.post(
           "http://localhost:5000/api/send-sms",
-          {
-            to: user.phone, // Send the phone number
-            message: finalMessage,
-          },
-          { withCredentials: true } // Ensures admin is logged in
+          { to: user.phone, message: finalMessage },
+          { withCredentials: true }
         );
-        successes.push(user.full_name || user.email);
+        return {
+          // Return success object
+          status: "fulfilled",
+          value: user.full_name || user.email,
+        };
       } catch (err) {
         console.error(`Failed to send SMS to ${user.phone}:`, err);
-        failures.push({
-          name: user.full_name || user.email,
+        return {
+          // Return failure object for API error
+          status: "failed",
           reason:
             err.response?.data?.error || err.message || "Network or API error",
+          name: user.full_name || user.email,
+        };
+      }
+    });
+
+    const results = await Promise.allSettled(sendPromises);
+
+    // Process results from Promise.allSettled
+    results.forEach((result) => {
+      // Check if the promise itself was fulfilled and the custom status within isn't 'failed'
+      if (result.status === "fulfilled" && result.value?.status !== "failed") {
+        successes.push(result.value.value); // Add the name/email from the successful value
+      } else {
+        // Either the promise was rejected, or it fulfilled but carried a 'failed' status (e.g., missing phone)
+        const failureData =
+          result.status === "rejected" ? result.reason : result.value;
+        failures.push({
+          name: failureData?.name || "Unknown User",
+          reason: failureData?.reason || "Unknown processing error",
         });
       }
-    }
+    });
 
     // Construct feedback message
     let feedback = "";
@@ -492,14 +695,20 @@ function AdminPage() {
         .join(", ")}.`;
     }
 
-    setMessage(feedback || "Processing complete."); // Fallback message
+    setMessage(feedback.trim() || "SMS processing complete."); // Fallback message
 
-    // Only close modal if all were successful
+    // Only close modal if all attempted sends were successful (or if there were only failures due to bad data)
     if (failures.length === 0 && successes.length > 0) {
       closeModal();
+    } else if (successes.length === 0 && failures.length > 0) {
+      // Keep modal open if all failed (maybe clear recipients list? Up to UX decision)
+      // setSmsRecipients([]); // Optional: Clear recipients on full failure
     }
+    // If mixed results, keep modal open with feedback.
   };
+  // --- SMS Handlers --- END ---
 
+  // --- JSX Return ---
   return (
     <>
       <Header />
@@ -509,16 +718,20 @@ function AdminPage() {
             <h1>Admin Panel</h1>
             <p>Control user accounts and manage services.</p>
           </section>
+          {/* Display message state */}
           {message && <div className="status-message">{message}</div>}
+
           <section className="admin-actions">
+            {/* Buttons */}
             <button onClick={() => openModal("addUser")}>Add User</button>
             <button onClick={() => openModal("addService")}>Add Service</button>
             <button onClick={() => openModal("addLoyaltyPoints")}>
               Add Loyalty Points
             </button>
-            <button onClick={() => openModal("sendSms")}>Send SMS</button>
-            <button onClick={() => openModal("managePosts")}>
-              Manage Posts
+            <button onClick={() => openModal("sendSms")}>Send SMS</button>{" "}
+            {/* Send SMS Button */}
+            <button onClick={() => openModal("managePosts")} disabled>
+              Manage Posts {/* Disabled example */}
             </button>
             <button onClick={() => openModal("viewPhotos")}>View Photos</button>
             <button onClick={() => openModal("updateVehicleStatus")}>
@@ -528,23 +741,30 @@ function AdminPage() {
               Send Notifications
             </button>
             <button onClick={() => openModal("sendInvoice")}>
-              Send Invoice
+              Create Invoice
             </button>
           </section>
         </div>
       </main>
+
+      {/* --- Modals --- */}
+
       {/* Send Notifications Modal */}
       <Modal
         isOpen={activeModal === "sendNotifications"}
         onRequestClose={closeModal}
+        contentLabel="Send Notification Modal" // Accessibility
       >
         <div className="modal-content">
           <div className="modal-header">
             <h2>Send Notification</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
+              {" "}
+              {/* Added class + aria-label */}
               <X size={20} />
             </button>
           </div>
@@ -553,6 +773,7 @@ function AdminPage() {
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
               required
+              className="modal-form-select"
             >
               <option value="">Select User</option>
               {users.map((user) => (
@@ -567,6 +788,7 @@ function AdminPage() {
               value={notificationTitle}
               onChange={(e) => setNotificationTitle(e.target.value)}
               required
+              className="modal-form-input"
             />
             <textarea
               placeholder="Message"
@@ -574,19 +796,26 @@ function AdminPage() {
               value={notificationMessage}
               onChange={(e) => setNotificationMessage(e.target.value)}
               required
+              className="modal-form-textarea"
             />
-            <button type="submit">Send</button>
+            <button type="submit">Send Notification</button>
           </form>
         </div>
       </Modal>
+
       {/* Add User Modal */}
-      <Modal isOpen={activeModal === "addUser"} onRequestClose={closeModal}>
+      <Modal
+        isOpen={activeModal === "addUser"}
+        onRequestClose={closeModal}
+        contentLabel="Add User Modal"
+      >
         <div className="modal-content">
           <div className="modal-header">
             <h2>Add User</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
@@ -598,6 +827,7 @@ function AdminPage() {
               value={newUserEmail}
               onChange={(e) => setNewUserEmail(e.target.value)}
               required
+              className="modal-form-input"
             />
             <input
               type="password"
@@ -605,37 +835,50 @@ function AdminPage() {
               value={newUserPassword}
               onChange={(e) => setNewUserPassword(e.target.value)}
               required
+              className="modal-form-input"
             />
             <input
               type="text"
               placeholder="First Name"
               value={newUserFirstName}
               onChange={(e) => setNewUserFirstName(e.target.value)}
+              className="modal-form-input"
             />
             <input
               type="text"
               placeholder="Last Name"
               value={newUserLastName}
               onChange={(e) => setNewUserLastName(e.target.value)}
+              className="modal-form-input"
             />
             <input
-              type="text"
-              placeholder="Phone"
+              type="tel" // Use type="tel" for better mobile UX
+              placeholder="Phone (e.g., +15551234567)" // Add format hint
               value={newUserPhone}
               onChange={(e) => setNewUserPhone(e.target.value)}
+              className="modal-form-input"
+              // Add basic phone validation pattern if desired:
+              // pattern="\+?[1-9]\d{1,14}"
+              // title="Phone number (e.g., +15551234567)"
             />
             <button type="submit">Add User</button>
           </form>
         </div>
       </Modal>
+
       {/* Add Service Modal */}
-      <Modal isOpen={activeModal === "addService"} onRequestClose={closeModal}>
+      <Modal
+        isOpen={activeModal === "addService"}
+        onRequestClose={closeModal}
+        contentLabel="Add Service Modal"
+      >
         <div className="modal-content">
           <div className="modal-header">
             <h2>Add Service</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
@@ -647,6 +890,7 @@ function AdminPage() {
               value={serviceName}
               onChange={(e) => setServiceName(e.target.value)}
               required
+              className="modal-form-input"
             />
             <textarea
               placeholder="Service Description"
@@ -654,74 +898,97 @@ function AdminPage() {
               value={serviceDescription}
               onChange={(e) => setServiceDescription(e.target.value)}
               required
+              className="modal-form-textarea"
             />
             <input
               type="number"
               placeholder="Service Price"
               value={servicePrice}
+              step="0.01" // Allow cents
+              min="0" // Prevent negative prices
               onChange={(e) => setServicePrice(e.target.value)}
               required
+              className="modal-form-input"
             />
             <button type="submit">Add Service</button>
           </form>
         </div>
       </Modal>
+
       {/* Add Loyalty Points Modal */}
       <Modal
         isOpen={activeModal === "addLoyaltyPoints"}
         onRequestClose={closeModal}
+        contentLabel="Add Loyalty Points Modal"
       >
         <div className="modal-content">
           <div className="modal-header">
             <h2>Add Loyalty Points</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
           </div>
+          {/* Search input for loyalty points */}
           <input
             type="text"
-            placeholder="Search by name, email, or phone"
+            className="modal-form-input" // Use consistent class
+            placeholder="Search user by name, email, or phone"
             value={loyaltySearchQuery}
             onChange={(e) => setLoyaltySearchQuery(e.target.value)}
+            style={{ marginBottom: "15px" }} // Add spacing if needed
           />
           <form className="modal-form" onSubmit={handleAddLoyaltyPointsSubmit}>
             <select
               value={loyaltySelectedUser}
               onChange={(e) => setLoyaltySelectedUser(e.target.value)}
               required
+              className="modal-form-select"
             >
               <option value="">Select User</option>
+              {/* Use filteredUsers based on loyaltySearchQuery */}
               {filteredUsers.map((user) => (
                 <option key={user.user_id} value={user.user_id}>
-                  {user.full_name} ({user.email})
+                  {user.full_name} ({user.email}){" "}
+                  {/* Maybe add phone here too? */}
                 </option>
               ))}
+              {filteredUsers.length === 0 && loyaltySearchQuery && (
+                <option value="" disabled>
+                  No users match search
+                </option>
+              )}
             </select>
             <input
               type="number"
               placeholder="Points to Add"
+              min="1" // Typically add positive points
               value={loyaltyPoints}
               onChange={(e) => setLoyaltyPoints(e.target.value)}
               required
+              className="modal-form-input"
             />
             <button type="submit">Add Points</button>
           </form>
         </div>
       </Modal>
+
       {/* Update Vehicle Status Modal */}
       <Modal
         isOpen={activeModal === "updateVehicleStatus"}
         onRequestClose={closeModal}
+        contentLabel="Update Vehicle Status Modal"
       >
         <div className="modal-content">
           <div className="modal-header">
             <h2>Update Vehicle Status</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
@@ -733,8 +1000,9 @@ function AdminPage() {
             {/* Dropdown to select a user */}
             <select
               value={selectedUserForVehicleStatus}
-              onChange={handleUserChange}
+              onChange={handleUserChange} // Use the specific handler
               required
+              className="modal-form-select"
             >
               <option value="">Select User</option>
               {users.map((user) => (
@@ -743,42 +1011,66 @@ function AdminPage() {
                 </option>
               ))}
             </select>
+
             {/* Dropdown to select a vehicle for the selected user */}
             <select
               value={selectedVehicle ? selectedVehicle.vehicle_id : ""}
-              onChange={handleVehicleChange}
+              onChange={handleVehicleChange} // Use the specific handler
               required
+              disabled={
+                !selectedUserForVehicleStatus ||
+                vehiclesForSelectedUser.length === 0
+              } // Disable if no user or no vehicles
+              className="modal-form-select"
             >
               <option value="">Select Vehicle</option>
-              {vehiclesForSelectedUser.map((vehicle) => (
-                <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
-                  {vehicle.license_plate} - {vehicle.make} {vehicle.model} (
-                  {vehicle.vehicle_status})
-                </option>
-              ))}
+              {vehiclesForSelectedUser.length > 0
+                ? vehiclesForSelectedUser.map((vehicle) => (
+                    <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+                      {vehicle.license_plate ||
+                        `${vehicle.make} ${vehicle.model}`}{" "}
+                      (Status: {vehicle.vehicle_status || "N/A"})
+                    </option>
+                  ))
+                : selectedUserForVehicleStatus && (
+                    <option value="" disabled>
+                      No vehicles found for this user
+                    </option>
+                  )}
             </select>
+
             {/* Dropdown to choose the new status */}
             <select
               value={newVehicleStatus}
               onChange={(e) => setNewVehicleStatus(e.target.value)}
               required
+              disabled={!selectedVehicle} // Disable if no vehicle selected
+              className="modal-form-select"
             >
               <option value="Waiting">Waiting</option>
               <option value="Active">Active</option>
               <option value="OffLot">OffLot</option>
             </select>
-            <button type="submit">Update Status</button>
+            <button type="submit" disabled={!selectedVehicle}>
+              Update Status
+            </button>
           </form>
         </div>
       </Modal>
+
       {/* Send Invoice Modal */}
-      <Modal isOpen={activeModal === "sendInvoice"} onRequestClose={closeModal}>
+      <Modal
+        isOpen={activeModal === "sendInvoice"}
+        onRequestClose={closeModal}
+        contentLabel="Create Invoice Modal"
+      >
         <div className="modal-content">
           <div className="modal-header">
-            <h2>Send Invoice</h2>
+            <h2>Create Invoice</h2> {/* Changed title slightly */}
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
@@ -786,93 +1078,110 @@ function AdminPage() {
           {/* Search input similar to loyalty points */}
           <input
             type="text"
-            placeholder="Search by name, email, or phone"
+            className="modal-form-input"
+            placeholder="Search user by name, email, or phone"
             value={invoiceSearchQuery}
             onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+            style={{ marginBottom: "15px" }}
           />
           <form className="modal-form" onSubmit={handleSendInvoiceSubmit}>
             {/* User selection dropdown */}
             <select
               value={invoiceSelectedUser}
-              onChange={handleInvoiceUserChange}
+              onChange={handleInvoiceUserChange} // Specific handler
               required
+              className="modal-form-select"
             >
               <option value="">Select User</option>
+              {/* Use filteredInvoiceUsers */}
               {filteredInvoiceUsers.map((user) => (
                 <option key={user.user_id} value={user.user_id}>
                   {user.full_name} ({user.email})
                 </option>
               ))}
+              {filteredInvoiceUsers.length === 0 && invoiceSearchQuery && (
+                <option value="" disabled>
+                  No users match search
+                </option>
+              )}
             </select>
 
             {/* Vehicle selection dropdown */}
             <select
               value={invoiceVehicleId}
-              onChange={handleInvoiceVehicleChange}
+              onChange={handleInvoiceVehicleChange} // Specific handler
               required
+              disabled={!invoiceSelectedUser || vehiclesForInvoice.length === 0}
+              className="modal-form-select"
             >
               <option value="">Select Vehicle</option>
-              {vehiclesForInvoice.map((vehicle) => (
-                <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
-                  {vehicle.license_plate} - {vehicle.make} {vehicle.model}
-                </option>
-              ))}
+              {vehiclesForInvoice.length > 0
+                ? vehiclesForInvoice.map((vehicle) => (
+                    <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+                      {vehicle.license_plate ||
+                        `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                    </option>
+                  ))
+                : invoiceSelectedUser && (
+                    <option value="" disabled>
+                      No vehicles found for this user
+                    </option>
+                  )}
             </select>
 
-            {/* Hidden email field that gets populated automatically */}
-            <input type="hidden" value={invoiceEmail} />
+            {/* Removed Hidden email field */}
+            {/* Removed Invoice Number input field */}
 
-            <div className="input-with-label">
-              <label>Invoice Number</label>
-              <input
-                type="text"
-                placeholder={
-                  isLoadingInvoiceNumber ? "Generating..." : "Invoice Number"
-                }
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                disabled
-                required
-              />
-              <small>Automatically generated</small>
-            </div>
             <input
               type="number"
               placeholder="Subtotal"
               value={subtotal}
               onChange={(e) => setSubtotal(e.target.value)}
+              step="0.01"
+              min="0"
               required
+              className="modal-form-input"
             />
             <input
               type="number"
-              placeholder="Tax Amount"
+              placeholder="Tax Amount (Optional)"
               value={taxAmount}
               onChange={(e) => setTaxAmount(e.target.value)}
-              required
+              step="0.01"
+              min="0"
+              className="modal-form-input"
             />
             <input
               type="number"
-              placeholder="Discount Amount"
+              placeholder="Discount Amount (Optional)"
               value={discountAmount}
               onChange={(e) => setDiscountAmount(e.target.value)}
-              required
+              step="0.01"
+              min="0"
+              className="modal-form-input"
             />
             <input
               type="number"
               placeholder="Total Amount"
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
+              step="0.01"
+              min="0"
               required
+              className="modal-form-input"
             />
             <select
               value={invoiceStatus}
               onChange={(e) => setInvoiceStatus(e.target.value)}
               required
+              className="modal-form-select"
             >
               <option value="">Select Status</option>
+              <option value="draft">Draft</option> {/* Added draft */}
               <option value="unpaid">Unpaid</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
+              <option value="void">Void</option> {/* Added void */}
             </select>
             <input
               type="date"
@@ -880,34 +1189,47 @@ function AdminPage() {
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               required
+              className="modal-form-input"
             />
             <textarea
-              placeholder="Notes"
+              placeholder="Notes (optional)"
               rows="3"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              className="modal-form-textarea"
             />
-            <button type="submit">Send Invoice</button>
+            <button type="submit">Create Invoice</button>
           </form>
         </div>
       </Modal>
-      <Modal isOpen={activeModal === "viewPhotos"} onRequestClose={closeModal}>
+
+      {/* View Photos Modal */}
+      <Modal
+        isOpen={activeModal === "viewPhotos"}
+        onRequestClose={closeModal}
+        contentLabel="View Vehicle Photos Modal"
+      >
         <div className="modal-content">
           <div className="modal-header">
             <h2>View Vehicle Photos</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
           </div>
 
-          <form className="modal-form">
+          {/* Form for selecting user and vehicle */}
+          <form className="modal-form" style={{ marginBottom: "20px" }}>
+            {" "}
+            {/* Added margin */}
             <select
               value={selectedUserForPhotos}
-              onChange={handleUserForPhotosChange}
+              onChange={handleUserForPhotosChange} // Specific handler
               required
+              className="modal-form-select"
             >
               <option value="">Select User</option>
               {users.map((user) => (
@@ -916,105 +1238,215 @@ function AdminPage() {
                 </option>
               ))}
             </select>
-
             <select
               value={selectedVehicleForPhotos}
-              onChange={handleVehicleForPhotosChange}
-              disabled={!selectedUserForPhotos}
+              onChange={handleVehicleForPhotosChange} // Specific handler
+              required
+              disabled={
+                !selectedUserForPhotos || vehiclesForPhotos.length === 0
+              }
+              className="modal-form-select"
             >
               <option value="">Select Vehicle</option>
-              {vehiclesForPhotos.map((v) => (
-                <option key={v.vehicle_id} value={v.vehicle_id}>
-                  {v.make} {v.model} ({v.year})
-                </option>
-              ))}
+              {vehiclesForPhotos.length > 0
+                ? vehiclesForPhotos.map((v) => (
+                    <option key={v.vehicle_id} value={v.vehicle_id}>
+                      {v.license_plate || `${v.year} ${v.make} ${v.model}`}
+                    </option>
+                  ))
+                : selectedUserForPhotos && (
+                    <option value="" disabled>
+                      No vehicles found for this user
+                    </option>
+                  )}
             </select>
           </form>
 
+          {/* Photo Grid Display - Includes ExternalLink */}
           <div className="photo-grid">
-            {vehiclePhotos.map((photo) => (
-              <div key={photo.media_id}>
-                <a
-                  href={photo.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <img
-                    src={photo.file_url}
-                    alt={photo.title || "Vehicle photo"}
-                  />
-                </a>
-                <div className="photo-caption">{photo.title}</div>
-                <div className="photo-status">
-                  Status: {photo.status || "Unknown"}
-                </div>
-              </div>
-            ))}
+            {vehiclePhotos.length > 0
+              ? vehiclePhotos.map((photo) => (
+                  <div key={photo.media_id}>
+                    {/* Image linked to S3 URL */}
+                    <a
+                      href={photo.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src={photo.file_url}
+                        alt={photo.title || "Vehicle photo"}
+                      />
+                    </a>
+
+                    {/* Container for Caption and Link Icon */}
+                    <div className="photo-caption-container">
+                      {" "}
+                      {/* Use this class for styling */}
+                      {/* Display title if available */}
+                      {photo.title && (
+                        <span className="photo-caption">{photo.title}</span>
+                      )}
+                      {/* --- Link Icon --- */}
+                      <a
+                        href={photo.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open image link in new tab" // Tooltip for accessibility
+                        className="photo-link-icon" // Class for styling
+                      >
+                        <ExternalLink size={14} strokeWidth={2.5} />{" "}
+                        {/* Adjust size/stroke as needed */}
+                      </a>
+                      {/* --- End Link Icon --- */}
+                    </div>
+                    {/* Optional: Display description separately if needed */}
+                    {/* {photo.description && <div className="photo-description">{photo.description}</div>} */}
+
+                    {/* Status display - requires backend to provide status per photo */}
+                    {/* <div className="photo-status">Status: {photo.status || "N/A"}</div> */}
+                  </div>
+                ))
+              : selectedVehicleForPhotos && (
+                  <p>No photos found for this vehicle.</p>
+                )}
+            {!selectedVehicleForPhotos && selectedUserForPhotos && (
+              <p>Please select a vehicle to view photos.</p>
+            )}
+            {/* Message if no user is selected */}
+            {!selectedUserForPhotos && (
+              <p>Please select a user and vehicle to view photos.</p>
+            )}
           </div>
         </div>
       </Modal>
-      <Modal isOpen={activeModal === "sendSms"} onRequestClose={closeModal}>
+
+      {/* --- Send SMS Modal (Refactored with Search and Add Dropdown) --- */}
+      <Modal
+        isOpen={activeModal === "sendSms"}
+        onRequestClose={closeModal}
+        contentLabel="Send SMS Message Modal"
+      >
         <div className="modal-content">
           <div className="modal-header">
             <h2>Send SMS Message</h2>
             <button
               onClick={closeModal}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              className="modal-close-button"
+              aria-label="Close modal"
             >
               <X size={20} />
             </button>
           </div>
+
+          {/* Search Input */}
           <input
             type="text"
             placeholder="Search users by name, email, phone..."
             value={smsSearchQuery}
             onChange={(e) => setSmsSearchQuery(e.target.value)}
-            style={{
-              marginBottom: "15px",
-              width: "100%",
-              padding: "10px",
-              border: "1px solid #ddd",
-              borderRadius: "5px",
-            }} // Inline style for example
+            className="modal-form-input" // Use consistent class
+            style={{ marginBottom: "15px" }} // Add spacing
           />
 
           <form className="modal-form" onSubmit={handleSendSmsSubmit}>
-            {/* Recipient Selection Area */}
-            <div
-              className="sms-recipient-list"
-              style={{
-                maxHeight: "200px",
-                overflowY: "auto",
-                border: "1px solid #ddd",
-                padding: "10px",
-                borderRadius: "5px",
-                marginBottom: "15px",
-              }}
+            {/* --- Recipient ADD Dropdown --- */}
+            <select
+              onChange={handleSmsUserSelectToAdd}
+              value="" // Keep value fixed to "" to act as a trigger
+              className="modal-form-select" // Use consistent class
+              aria-label="Add SMS Recipient" // Accessibility
             >
-              {filteredSmsUsers.length > 0 ? (
-                filteredSmsUsers.map((user) => (
-                  <label
-                    key={user.user_id}
-                    style={{
-                      display: "block",
-                      marginBottom: "8px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      value={user.user_id}
-                      checked={smsRecipients.includes(user.user_id)}
-                      onChange={handleSmsRecipientChange}
-                      style={{ marginRight: "8px" }}
-                    />
-                    {user.full_name} ({user.email} - {user.phone})
-                  </label>
+              <option value="">-- Add Recipient --</option>
+              {filteredSmsUsersForDropdown.length > 0 ? (
+                filteredSmsUsersForDropdown.map((user) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.full_name} ({user.phone}) {/* Display phone */}
+                  </option>
                 ))
               ) : (
-                <p style={{ color: "#666", fontStyle: "italic" }}>
-                  No users found with phone numbers matching your search.
+                <option value="" disabled>
+                  {smsSearchQuery
+                    ? "No matching users found"
+                    : "No available users to add"}
+                </option>
+              )}
+            </select>
+
+            {/* --- Display Selected Recipients --- */}
+            <div
+              className="sms-selected-recipients" // Add a class for potential styling
+              style={{ marginTop: "10px", marginBottom: "15px" }}
+            >
+              <strong style={{ display: "block", marginBottom: "5px" }}>
+                Recipients ({smsRecipients.length}):
+              </strong>
+              {smsRecipients.length === 0 ? (
+                <p
+                  style={{
+                    fontStyle: "italic",
+                    color: "#666",
+                    margin: "5px 0 0 0", // Adjust margin
+                  }}
+                >
+                  No recipients added yet.
                 </p>
+              ) : (
+                <ul
+                  style={{
+                    // Basic styling for the list
+                    listStyle: "none",
+                    paddingLeft: 0,
+                    marginTop: "5px",
+                    maxHeight: "150px", // Limit height and make scrollable
+                    overflowY: "auto",
+                    border: "1px solid #eee", // Visual separation
+                    borderRadius: "4px",
+                    padding: "10px",
+                  }}
+                >
+                  {smsRecipients.map((userId) => {
+                    const user = users.find((u) => u.user_id === userId);
+                    // Basic check in case user data is somehow missing briefly
+                    if (!user) return <li key={userId}>Loading user...</li>;
+                    return (
+                      <li
+                        key={userId}
+                        style={{
+                          // Style for each recipient item
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "6px 5px",
+                          borderBottom: "1px solid #eee", // Separator line
+                        }}
+                      >
+                        <span style={{ fontSize: "0.9rem" }}>
+                          {user.full_name} ({user.phone})
+                        </span>
+                        <button
+                          type="button" // Prevent form submission
+                          onClick={() => handleRemoveSmsRecipient(userId)}
+                          title={`Remove ${user.full_name}`}
+                          className="remove-recipient-button" // Add class for styling
+                          aria-label={`Remove ${user.full_name} from recipients`}
+                          style={{
+                            // Simple styling for remove button
+                            background: "none",
+                            border: "none",
+                            color: "#dc3545", // Danger color
+                            cursor: "pointer",
+                            fontSize: "1.2rem", // Make 'x' larger
+                            padding: "0 5px",
+                            lineHeight: "1",
+                          }}
+                        >
+                          &times; {/* Simple 'x' character */}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </div>
 
@@ -1025,6 +1457,7 @@ function AdminPage() {
               value={smsMessage}
               onChange={(e) => setSmsMessage(e.target.value)}
               required
+              className="modal-form-textarea" // Use consistent class
             />
 
             {/* Submit Button */}
@@ -1035,10 +1468,12 @@ function AdminPage() {
               Send SMS to {smsRecipients.length} User(s)
             </button>
           </form>
-          {/* Display feedback within the modal if needed */}
+          {/* Optional: Display API feedback message inside modal */}
           {/* {message && <div className="status-message" style={{marginTop: '15px'}}>{message}</div>} */}
         </div>
       </Modal>
+      {/* --- End Send SMS Modal --- */}
+
       <Footer />
     </>
   );

@@ -423,7 +423,7 @@ def add_user():
     try:
         # Insert new user into database
         cursor.execute(
-            "INSERT INTO users (email, password_hash, first_name, last_name, phone,) VALUES (%s, %s, %s, %s, %s) RETURNING user_id",
+            "INSERT INTO users (email, password_hash, first_name, last_name, phone) VALUES (%s, %s, %s, %s, %s) RETURNING user_id",
             (
                 data["email"],
                 hashed_password,
@@ -460,7 +460,9 @@ def get_users():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, email, first_name, last_name FROM users;")
+        cursor.execute(
+            "SELECT user_id, email, first_name, last_name, phone FROM users;"
+        )  # Added phone field
         users = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -474,6 +476,7 @@ def get_users():
                     "user_id": u["user_id"],
                     "email": u["email"],
                     "full_name": full_name or u["email"],
+                    "phone": u.get("phone", ""),  # Include phone in the response
                 }
             )
 
