@@ -77,25 +77,27 @@ function AdminPage() {
   const [smsMessage, setSmsMessage] = useState("");
   const [smsSearchQuery, setSmsSearchQuery] = useState(""); // For filtering users
 
+  // Active Jobs state
+  const [activeJobs, setActiveJobs] = useState([]);
+
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
     setMessage(""); // Clear previous messages
+
+    // Fetch users for certain modals
     if (
       modalName === "sendNotifications" ||
       modalName === "addLoyaltyPoints" ||
       modalName === "updateVehicleStatus" ||
       modalName === "sendInvoice" ||
       modalName === "viewPhotos" ||
-      modalName === "sendSms" // Added sendSms here
+      modalName === "sendSms"
     ) {
-      // Fetch users if needed for these modals
-      // IMPORTANT: Ensure the backend /api/get-users returns phone numbers!
       axios
         .get("http://localhost:5000/api/get-users", { withCredentials: true })
         .then((res) => {
           if (res.data.status === "success") {
-            // Assuming res.data.users now contains 'phone' field
             setUsers(res.data.users);
           } else {
             console.error("Failed to fetch users:", res.data.message);
@@ -111,6 +113,33 @@ function AdminPage() {
           );
         });
     }
+
+    // Fetch active jobs when opening Manage Posts
+    if (modalName === "active-jobs") {
+      axios
+        .get("http://localhost:5000/api/active-jobs", { withCredentials: true })
+        .then((res) => {
+          if (res.data.status === "success") {
+            setActiveJobs(res.data.active_jobs);
+          } else {
+            console.error("Failed to fetch active jobs:", res.data.message);
+            setMessage(
+              `Error loading active jobs: ${
+                res.data.message || "Unknown error"
+              }`
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching active jobs:", err);
+          setMessage(
+            `Error loading active jobs: ${
+              err.response?.data?.message || err.message
+            }`
+          );
+        });
+    }
+
     // Add specific data fetching for other modals if necessary
   };
 
@@ -730,8 +759,8 @@ function AdminPage() {
             </button>
             <button onClick={() => openModal("sendSms")}>Send SMS</button>{" "}
             {/* Send SMS Button */}
-            <button onClick={() => openModal("managePosts")} disabled>
-              Manage Posts {/* Disabled example */}
+            <button onClick={() => openModal("active-jobs")}>
+              Active Jobs
             </button>
             <button onClick={() => openModal("viewPhotos")}>View Photos</button>
             <button onClick={() => openModal("updateVehicleStatus")}>
@@ -1471,7 +1500,54 @@ function AdminPage() {
         </div>
       </Modal>
       {/* --- End Send SMS Modal --- */}
+      {/* --- Active Job Modal---*/}
+      <Modal
+        isOpen={activeModal === "active-jobs"}
+        onRequestClose={closeModal}
+        contentLabel="Active Jobs Modal"
+      >
+        <div className="modal-content">
+          <div className="modal-header">
+            <h2>Active Jobs</h2>
+            <button
+              onClick={closeModal}
+              className="modal-close-button"
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
+          {activeJobs.length > 0 ? (
+            <div className="modal-table-container">
+              <table className="modal-table">
+                <thead>
+                  <tr>
+                    <th>Owner</th>
+                    <th>License Plate</th>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Year</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeJobs.map((job) => (
+                    <tr key={job.vehicle_id}>
+                      <td data-label="Owner">{job.owner.full_name}</td>
+                      <td data-label="License">{job.license_plate}</td>
+                      <td data-label="Make">{job.make}</td>
+                      <td data-label="Model">{job.model}</td>
+                      <td data-label="Year">{job.year}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>No active jobs found.</p>
+          )}
+        </div>
+      </Modal>
       <Footer />
     </>
   );

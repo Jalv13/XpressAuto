@@ -349,3 +349,73 @@
   text-align: center;
   padding: 10px 0;
 }
+/* TEST */
+/* Modal content sizing */
+.modal-content {
+  padding: 1rem;
+  max-width: 90%;
+  width: 90vw;
+  margin: auto;
+}
+
+/* Header layout */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* Make table scrollable on narrow viewports */
+.modal-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Base table styling */
+.modal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.modal-table th,
+.modal-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Responsive “stacked” rows below 600px */
+@media (max-width: 600px) {
+  .modal-table,
+  .modal-table thead,
+  .modal-table tbody,
+  .modal-table th,
+  .modal-table td,
+  .modal-table tr {
+    display: block;
+  }
+  .modal-table thead tr {
+    display: none;
+  }
+  .modal-table tr {
+    margin-bottom: 1rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 0.5rem;
+  }
+  .modal-table td {
+    position: relative;
+    padding-left: 50%;
+    text-align: right;
+  }
+  .modal-table td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 45%;
+    padding-left: 0.5rem;
+    font-weight: bold;
+    text-align: left;
+  }
+}

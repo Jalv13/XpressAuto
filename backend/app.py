@@ -2132,6 +2132,63 @@ def get_vehicle_photos(vehicle_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# TEST
+@app.route("/api/active-jobs", methods=["GET"])
+@login_required
+@admin_required
+def get_active_jobs():
+    """
+    Returns all vehicles marked as Waiting or Active,
+    along with their owner’s info.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+          v.vehicle_id,
+          v.license_plate,
+          v.make,
+          v.model,
+          v.year,
+          u.user_id,
+          u.first_name,
+          u.last_name,
+          u.email
+        FROM vehicles v
+        JOIN users u ON v.user_id = u.user_id
+        WHERE v.vehicle_status IN ('Waiting', 'Active')
+        ORDER BY v.license_plate;
+    """
+    )
+
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    active_jobs = []
+    for r in rows:
+        # Build a display name, falling back to email if no names set
+        full_name = f"{r['first_name']} {r['last_name']}".strip() or r["email"]
+        active_jobs.append(
+            {
+                "vehicle_id": r["vehicle_id"],
+                "license_plate": r["license_plate"],
+                "make": r["make"],
+                "model": r["model"],
+                "year": r["year"],
+                "owner": {
+                    "user_id": r["user_id"],
+                    "full_name": full_name,
+                    "email": r["email"],
+                },
+            }
+        )
+
+    return jsonify({"status": "success", "active_jobs": active_jobs}), 200
+
+
 # APPLICATION ENTRY POINT
 
 if __name__ == "__main__":

@@ -1681,13 +1681,7 @@ function Dashboard() {
             // Use className for styling via <style> block or CSS file
             <div className="stripe-payment-section">
               {/* Context Header: Which invoice is being paid? */}
-              <h4
-                style={
-                  {
-                    /* Styles are in <style> block or CSS */
-                  }
-                }
-              >
+              <h4 style={{}}>
                 Enter Payment Details for Invoice #
                 {/* Find the invoice number safely */}
                 {invoices.find(
