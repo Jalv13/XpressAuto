@@ -6,248 +6,9 @@ import Modal from "react-modal";
 import { X } from "lucide-react";
 import axios from "axios";
 import "./cssFiles/PossibleDeadCSS.css";
+import "./cssFiles/admin.css";
 
 // Combined admin styles with modal-specific styles appended
-const adminStyles = `
-  /* Existing Admin Styles */
-  .admin-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
-    background-color: white;
-  }
-  .admin-box {
-    width: 100%;
-    max-width: calc(100% - 20px);
-    background-color: white;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border: 1px solid #eee;
-    margin: auto;
-  }
-  .admin-overview {
-    margin-bottom: 30px;
-    text-align: center;
-  }
-  .admin-overview h1 {
-    font-size: 2rem;
-    margin-bottom: 10px;
-  }
-  .admin-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: center;
-    margin-bottom: 40px;
-  }
-  .admin-actions button {
-    flex: 1;
-    min-width: 160px;
-    height: 50px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 4px;
-    background-color: rgba(255, 204, 0, 0.95);
-    color: #333;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: relative;
-    overflow: hidden;
-    padding: 0 15px;
-  }
-  .admin-actions button:hover {
-    background-color: #ffd700;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  .status-message {
-    text-align: center;
-    padding: 10px;
-    margin-bottom: 20px;
-    background-color: #f0f8ff;
-    border-radius: 5px;
-  }
-  .modal-content {
-    padding: 20px;
-  }
-  .modal-content h2 {
-    margin-top: 0;
-    text-align: center;
-  }
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 15px;
-  }
-  .modal-form input,
-  .modal-form textarea,
-  .modal-form select {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .modal-form button {
-    width: 100%;
-    height: 40px;
-    background-color: rgba(255, 204, 0, 0.95);
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  .modal-form button:hover {
-    background-color: #ffd700;
-  }
-
-  /* Modal Styles */
-  .ReactModal__Overlay {
-    background-color: rgba(0, 0, 0, 0.6) !important;
-    z-index: 1000;
-  }
-  .ReactModal_Content {
-    position: relative;
-    margin: auto;
-    width: 90%;
-    max-width: calc(100% - 20px)
-    padding: 20px;
-    border-radius: 8px;
-    background-color: #fff;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    border: none;
-    outline: none;
-  }
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-  }
-  .modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #333;
-  }
-  .modal-form input,
-  .modal-form textarea,
-  .modal-form select {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
-  }
-  .modal-form input:focus,
-  .modal-form textarea:focus,
-  .modal-form select:focus {
-    border-color: #007bff;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-  }
-  .modal-form button {
-    padding: 12px;
-    width: 100%;
-    background-color: #ffcc00;
-    border: none;
-    border-radius: 5px;
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-  }
-  .modal-form button:hover {
-    background-color: #e6b800;
-    transform: translateY(-2px);
-  }
-
-  .status-message {
-    text-align: center;
-    padding: 10px;
-    margin-bottom: 20px;
-    background-color: #f0f8ff;
-    border-radius: 5px;
-  }
-  .modal-content {
-    padding: 10px;
-  }
-  .modal-content h2 {
-    margin-top: 0;
-    text-align: center;
-  }
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 15px;
-  }
-  .modal-form input,
-  .modal-form textarea,
-  .modal-form select {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .modal-form button {
-    width: 100%;
-    height: 40px;
-    background-color: rgba(255, 204, 0, 0.95);
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  .modal-form button:hover {
-    background-color: #ffd700;
-  }
-  .photo-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 20px;
-    justify-content: center;
-  }
-  .photo-grid div {
-    text-align: center;
-    font-size: 0.85rem;
-    color: #444;
-    width: 180px;
-  }
-  .photo-grid img {
-    width: 180px;
-    height: 120px;
-    object-fit: cover;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-  }
-  .photo-grid img:hover {
-    transform: scale(1.05);
-  }
-  .photo-caption {
-    margin-top: 5px;
-    font-weight: 500;
-  }
-  .photo-status {
-    font-size: 0.75rem;
-    color: #777;
-  }
-`;
 
 Modal.setAppElement("#root");
 
@@ -314,6 +75,11 @@ function AdminPage() {
   const [selectedVehicleForPhotos, setSelectedVehicleForPhotos] = useState("");
   const [vehiclePhotos, setVehiclePhotos] = useState([]);
 
+  //Sms
+  const [smsRecipients, setSmsRecipients] = useState([]); // Array of user_ids
+  const [smsMessage, setSmsMessage] = useState("");
+  const [smsSearchQuery, setSmsSearchQuery] = useState(""); // For filtering users
+
   // Open modal and fetch necessary data
   const openModal = (modalName) => {
     setActiveModal(modalName);
@@ -370,6 +136,9 @@ function AdminPage() {
     setInvoiceStatus("");
     setDueDate("");
     setNotes("");
+    setSmsRecipients([]);
+    setSmsMessage("");
+    setSmsSearchQuery("");
   };
 
   // Handlers for form submissions
@@ -585,6 +354,36 @@ function AdminPage() {
     );
   });
 
+  const handleSmsRecipientChange = (e) => {
+    const userId = parseInt(e.target.value, 10);
+    const isChecked = e.target.checked;
+
+    if (isChecked) {
+      // Add user ID if checked and not already present
+      setSmsRecipients((prevRecipients) =>
+        prevRecipients.includes(userId)
+          ? prevRecipients
+          : [...prevRecipients, userId]
+      );
+    } else {
+      // Remove user ID if unchecked
+      setSmsRecipients((prevRecipients) =>
+        prevRecipients.filter((id) => id !== userId)
+      );
+    }
+  };
+
+  const filteredSmsUsers = users.filter((user) => {
+    const query = smsSearchQuery.toLowerCase();
+    // Ensure user has a phone number to be selectable for SMS
+    return (
+      user.phone &&
+      (user.full_name?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        user.phone?.toLowerCase().includes(query))
+    );
+  });
+
   // Filter vehicles based on license plate query (if needed elsewhere)
   // const filteredVehicles = vehicles.filter((vehicle) => {
   //   const query = vehicleSearchQuery.toLowerCase();
@@ -629,9 +428,80 @@ function AdminPage() {
         }
       });
   };
+  //sms handler
+  const handleSendSmsSubmit = async (e) => {
+    e.preventDefault();
+
+    if (smsRecipients.length === 0) {
+      setMessage("Please select at least one recipient.");
+      return;
+    }
+    if (!smsMessage.trim()) {
+      setMessage("Please enter a message to send.");
+      return;
+    }
+
+    setMessage("Sending messages..."); // Indicate processing
+
+    const successes = [];
+    const failures = [];
+    const finalMessage = `From Express Auto: ${smsMessage} Reply STOP to stop receiving texts.`;
+
+    for (const userId of smsRecipients) {
+      const user = users.find((u) => u.user_id === userId);
+
+      if (!user || !user.phone) {
+        failures.push({
+          name: user?.full_name || `User ID ${userId}`,
+          reason: "Missing or invalid phone number in profile",
+        });
+        continue; // Skip this user
+      }
+
+      try {
+        // Assuming '/api/send-sms' takes 'to' and 'message'
+        await axios.post(
+          "http://localhost:5000/api/send-sms",
+          {
+            to: user.phone, // Send the phone number
+            message: finalMessage,
+          },
+          { withCredentials: true } // Ensures admin is logged in
+        );
+        successes.push(user.full_name || user.email);
+      } catch (err) {
+        console.error(`Failed to send SMS to ${user.phone}:`, err);
+        failures.push({
+          name: user.full_name || user.email,
+          reason:
+            err.response?.data?.error || err.message || "Network or API error",
+        });
+      }
+    }
+
+    // Construct feedback message
+    let feedback = "";
+    if (successes.length > 0) {
+      feedback += `Successfully sent SMS to ${
+        successes.length
+      } user(s): ${successes.join(", ")}. `;
+    }
+    if (failures.length > 0) {
+      feedback += `Failed to send SMS to ${failures.length} user(s): ${failures
+        .map((f) => `${f.name} (${f.reason})`)
+        .join(", ")}.`;
+    }
+
+    setMessage(feedback || "Processing complete."); // Fallback message
+
+    // Only close modal if all were successful
+    if (failures.length === 0 && successes.length > 0) {
+      closeModal();
+    }
+  };
+
   return (
     <>
-      <style>{adminStyles}</style>
       <Header />
       <main className="admin-container">
         <div className="admin-box">
@@ -646,9 +516,7 @@ function AdminPage() {
             <button onClick={() => openModal("addLoyaltyPoints")}>
               Add Loyalty Points
             </button>
-            <button onClick={() => openModal("addBankInfo")}>
-              Add Bank Information
-            </button>
+            <button onClick={() => openModal("sendSms")}>Send SMS</button>
             <button onClick={() => openModal("managePosts")}>
               Manage Posts
             </button>
@@ -1066,7 +934,16 @@ function AdminPage() {
           <div className="photo-grid">
             {vehiclePhotos.map((photo) => (
               <div key={photo.media_id}>
-                <img src={photo.file_url} alt={photo.title} />
+                <a
+                  href={photo.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    src={photo.file_url}
+                    alt={photo.title || "Vehicle photo"}
+                  />
+                </a>
                 <div className="photo-caption">{photo.title}</div>
                 <div className="photo-status">
                   Status: {photo.status || "Unknown"}
@@ -1074,6 +951,92 @@ function AdminPage() {
               </div>
             ))}
           </div>
+        </div>
+      </Modal>
+      <Modal isOpen={activeModal === "sendSms"} onRequestClose={closeModal}>
+        <div className="modal-content">
+          <div className="modal-header">
+            <h2>Send SMS Message</h2>
+            <button
+              onClick={closeModal}
+              style={{ background: "none", border: "none", cursor: "pointer" }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <input
+            type="text"
+            placeholder="Search users by name, email, phone..."
+            value={smsSearchQuery}
+            onChange={(e) => setSmsSearchQuery(e.target.value)}
+            style={{
+              marginBottom: "15px",
+              width: "100%",
+              padding: "10px",
+              border: "1px solid #ddd",
+              borderRadius: "5px",
+            }} // Inline style for example
+          />
+
+          <form className="modal-form" onSubmit={handleSendSmsSubmit}>
+            {/* Recipient Selection Area */}
+            <div
+              className="sms-recipient-list"
+              style={{
+                maxHeight: "200px",
+                overflowY: "auto",
+                border: "1px solid #ddd",
+                padding: "10px",
+                borderRadius: "5px",
+                marginBottom: "15px",
+              }}
+            >
+              {filteredSmsUsers.length > 0 ? (
+                filteredSmsUsers.map((user) => (
+                  <label
+                    key={user.user_id}
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      value={user.user_id}
+                      checked={smsRecipients.includes(user.user_id)}
+                      onChange={handleSmsRecipientChange}
+                      style={{ marginRight: "8px" }}
+                    />
+                    {user.full_name} ({user.email} - {user.phone})
+                  </label>
+                ))
+              ) : (
+                <p style={{ color: "#666", fontStyle: "italic" }}>
+                  No users found with phone numbers matching your search.
+                </p>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <textarea
+              placeholder="Enter your message content here... 'From Express Auto:' and 'Reply STOP...' will be added automatically."
+              rows="4"
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
+              required
+            />
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={smsRecipients.length === 0 || !smsMessage.trim()}
+            >
+              Send SMS to {smsRecipients.length} User(s)
+            </button>
+          </form>
+          {/* Display feedback within the modal if needed */}
+          {/* {message && <div className="status-message" style={{marginTop: '15px'}}>{message}</div>} */}
         </div>
       </Modal>
       <Footer />

@@ -277,6 +277,131 @@ def get_user():
 # API ROUTES - USER MANAGEMENT
 
 
+@app.route("/api/make-admin", methods=["POST"])
+@login_required  # Ensure the requesting user is logged in
+@admin_required  # Ensure the requesting user is an admin
+def make_admin():
+    """
+    Toggles the is_admin status for a specified user.
+    Expects a JSON payload with 'user_id'.
+    """
+    data = request.get_json()
+    target_user_id = data.get("user_id")
+
+    # --- Input Validation ---
+    if not target_user_id:
+        return (
+            jsonify(
+                {"status": "error", "message": "Missing 'user_id' in request body"}
+            ),
+            400,
+        )
+
+    # Prevent admin from accidentally removing their own admin status via this route
+    # Admins should manage their status through direct DB access or a dedicated profile setting
+    if target_user_id == current_user.id:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Cannot change your own admin status via this endpoint.",
+                }
+            ),
+            403,
+        )
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # --- Fetch current admin status ---
+        cursor.execute(
+            "SELECT is_admin FROM users WHERE user_id = %s", (target_user_id,)
+        )
+        user_record = cursor.fetchone()
+
+        if not user_record:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"User with ID {target_user_id} not found",
+                    }
+                ),
+                404,
+            )
+
+        current_status = user_record["is_admin"]
+        new_status = not current_status  # Toggle the boolean value
+
+        # --- Update the user's admin status ---
+        cursor.execute(
+            "UPDATE users SET is_admin = %s WHERE user_id = %s",
+            (new_status, target_user_id),
+        )
+
+        # --- Check if update was successful ---
+        if cursor.rowcount == 0:
+            # Should not happen if fetch succeeded, but good safety check
+            conn.rollback()  # Rollback any potential partial changes
+            return (
+                jsonify(
+                    {"status": "error", "message": "Failed to update user status."}
+                ),
+                500,
+            )
+
+        conn.commit()  # Commit the transaction
+
+        status_message = "promoted to admin" if new_status else "demoted from admin"
+        app.logger.info(
+            f"Admin user {current_user.id} {status_message} user {target_user_id}"
+        )  # Add logging
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"User ID {target_user_id} has been {status_message}.",
+                    "user_id": target_user_id,
+                    "is_admin": new_status,
+                }
+            ),
+            200,
+        )
+
+    except psycopg2.Error as db_error:
+        app.logger.error(
+            f"Database error in make_admin for user {target_user_id}: {db_error}"
+        )
+        if conn:
+            conn.rollback()  # Rollback on database error
+        return jsonify({"status": "error", "message": "Database error occurred."}), 500
+    except Exception as e:
+        app.logger.error(
+            f"Unexpected error in make_admin for user {target_user_id}: {e}"
+        )
+        if conn:
+            conn.rollback()  # Rollback on general error
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"An unexpected error occurred: {str(e)}",
+                }
+            ),
+            500,
+        )
+    finally:
+
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 @app.route("/api/add-user", methods=["POST"])
 def add_user():
     """Creates a new user account"""
@@ -298,7 +423,7 @@ def add_user():
     try:
         # Insert new user into database
         cursor.execute(
-            "INSERT INTO users (email, password_hash, first_name, last_name, phone) VALUES (%s, %s, %s, %s, %s) RETURNING user_id",
+            "INSERT INTO users (email, password_hash, first_name, last_name, phone,) VALUES (%s, %s, %s, %s, %s) RETURNING user_id",
             (
                 data["email"],
                 hashed_password,
